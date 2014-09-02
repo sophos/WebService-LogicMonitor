@@ -5,7 +5,7 @@ use Moo;
 use autodie;
 use Carp;
 use Hash::Merge 'merge';
-use HTTP::Tiny;
+use LWP::UserAgent;
 use JSON;
 use List::Util qw/first/;
 use Log::Any qw/$log/;
@@ -35,8 +35,7 @@ sub _build__lm_auth_hash {
 
 sub _build__ua {
     my $self = shift;
-    return HTTP::Tiny->new(timeout => 10,);
-
+    return LWP::UserAgent->new(timeout => 10);
 }
 
 sub _get_uri {
@@ -55,9 +54,9 @@ sub _get_data {
     my $uri = $self->_get_uri($method);
 
     my $res = $self->_ua->get($uri);
-    croak "Failed!\n" unless $res->{success};
+    croak "Failed!\n" unless $res->is_success;
 
-    my $res_decoded = decode_json $res->{content};
+    my $res_decoded = decode_json $res->decoded_content;
 
     # TODO check status/error codes from API
     my $data = $res_decoded->{data};
@@ -67,8 +66,8 @@ sub _get_data {
 sub _send_data {
     my ($self, $uri) = @_;
     my $res = $self->_ua->get($uri);
-    croak "Failed!\n" unless $res->{success};
-    my $res_decoded = decode_json $res->{content};
+    croak "Failed!\n" unless $res->is_success;
+    my $res_decoded = decode_json $res->decoded_content;
     return;
 }
 
