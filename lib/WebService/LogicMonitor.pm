@@ -4,7 +4,6 @@ use v5.14.2;
 use Moo;
 use autodie;
 use Carp;
-use Data::Printer;
 use Hash::Merge::Simple 'merge';
 use HTTP::Tiny;
 use JSON;
