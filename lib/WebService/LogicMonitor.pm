@@ -1,6 +1,8 @@
 package WebService::LogicMonitor;
 
-use v5.14.2;
+# ABSTRACT: Interact with LogicMonitor through their web API
+
+use v5.10.1;
 use Moo;
 use autodie;
 use Carp;

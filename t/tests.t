@@ -1,4 +1,4 @@
-use v5.14.2;
+use v5.10.1;
 use Test::Roo;
 
 sub BUILD {
