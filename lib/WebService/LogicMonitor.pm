@@ -60,9 +60,14 @@ sub _get_data {
 
     my $res_decoded = decode_json $res->decoded_content;
 
-    # TODO check status/error codes from API
-    my $data = $res_decoded->{data};
-    return $data;
+    if ($res_decoded->{status} != 200) {
+        croak(
+            sprintf 'Failed to fetch data: [%s] %s',
+            $res_decoded->{status},
+            $res_decoded->{errmsg});
+    }
+
+    return $res_decoded->{data};
 }
 
 sub _send_data {
