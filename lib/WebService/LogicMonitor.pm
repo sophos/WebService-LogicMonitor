@@ -9,7 +9,8 @@ use Carp;
 use Hash::Merge 'merge';
 use LWP::UserAgent;
 use JSON;
-use List::Util qw/first/;
+use List::Util 'first';
+use List::MoreUtils 'zip';
 use Log::Any qw/$log/;
 use URI::QueryParam;
 use URI;
@@ -135,6 +136,160 @@ sub get_account_by_email {
     croak "Failed to find account with email <$email>" unless $account;
 
     return $account;
+}
+
+=method C<get_data>
+  host    string  The display name of the host
+  dataSourceInstance  string  The Unique name of the DataSource Instance
+  period  string  The time period to Download Data from. Valid inputs include nhours, ndays, nweeks, nmonths, or nyears (ex. 2hours)
+  dataPoint{0-n}  string  The unique name of the Datapoint
+  start, end  long    Epoch Time in seconds
+  graphId integer (Optional) The Unique ID of the Datasource Instance Graph
+  graph   string  (Optional) The Unique Graph Name
+  aggregate   string  (Optional- defaults to null) Take the "AVERAGE", "MAX", "MIN", or "LAST" of your data
+  overviewGraph   string  The name of the Overview Graph to get data from
+=cut
+
+sub get_data {
+    my ($self, %args) = @_;
+
+    croak "'host' is required" unless $args{host};
+    croak "'dsi' is required"  unless $args{dsi};
+
+    my $uri = $self->_get_uri('getData');
+
+    # required
+    $uri->query_param_append('host',               $args{host});
+    $uri->query_param_append('dataSourceInstance', $args{dsi});
+
+    # optional
+    $uri->query_param_append('start', $args{start}) if $args{start};
+    $uri->query_param_append('end',   $args{end})   if $args{end};
+    $uri->query_param_append('aggregate', $args{aggregate})
+      if $args{aggregate};
+
+    # XXX period seems to do nothing if start and end are specified
+    $uri->query_param_append('period', $args{period}) if $args{period};
+
+    if ($args{datapoint}) {
+        croak "'datapoint' must be an arrayref"
+          unless ref $args{datapoint} eq 'ARRAY';
+
+        for my $i (0 .. scalar @{$args{datapoint}} - 1) {
+            $uri->query_param_append("dataPoint$i", $args{datapoint}->[$i]);
+        }
+    }
+
+    $log->debug("Fetching uri: $uri");
+    my $res = $self->_ua->get($uri);
+    croak "Failed!\n" unless $res->is_success;
+
+    my $res_decoded = decode_json $res->decoded_content;
+
+    if ($res_decoded->{status} != 200) {
+        croak(
+            sprintf 'Failed to fetch data: [%s] %s',
+            $res_decoded->{status},
+            $res_decoded->{errmsg});
+    }
+
+    my $datapoints = $res_decoded->{data}->{dataPoints};
+
+    $log->debug('Got '
+          . scalar @{$res_decoded->{data}->{values}->{$args{dsi}}}
+          . ' values');
+    my $tzoffset = $res_decoded->{data}->{tzoffset};    # don't need this...?
+
+    my $data = [];
+    foreach my $dsi_values (@{$res_decoded->{data}->{values}->{$args{dsi}}}) {
+
+        # the dsi_values array provides the values for the datapoints but the first
+        # two entries are time info
+        my $epoch      = shift @$dsi_values;
+        my $timestring = shift @$dsi_values;
+
+        #require DateTime;
+        #my $dt = DateTime->from_epoch(epoch => $epoch);
+
+        if (scalar @$datapoints != scalar @$dsi_values) {
+
+            # TODO just ignore this point and carry on?
+            croak 'Number of datapoints doesn\'t match number of values';
+        }
+
+        my %values = zip @$datapoints, @$dsi_values;
+        push @$data,
+          {epoch => $epoch, timestr => $timestring, values => \%values};
+    }
+
+    return $data;
+}
+
+=method C<get_alerts>
+    boolean includeInactive=false,
+    boolean needTotal=false,
+    boolean needMessage=false,
+    int startEpoch=0,
+    int endEpoch=0,
+    int results=0,
+    int id=""&String type=alert|eventalert|batchjobalert,
+    String ackFilter="all" | "acked" | "nonacked",
+    String filterSDT="true" | "false",
+    String group="",
+    int hostGroupId=0
+    String host="",
+    int hostId=0,
+    String dataSource,
+    String dataPoint,
+    String level="all"|"warn"|"error"|"critical",
+    String orderBy="host"|"dataSource"|"dataPoint"|"level"|"ackedOn"| "startOn"|"endOn",
+    String orderDirection="asc"|"desc"
+
+    id - A list of alert IDs, such as "1,2,3,99". (You must also specify the alert type)
+    group or hostGroupId - Returns all alerts of the specified group.
+    host or hostId - Returns all alerts of the specified host. If using host, use the display name of your host.
+    dataSource - Returns all alerts for instances of a specified datasource.
+    dataPoint - Returns all alerts for instances of a specified datasource datapoint.
+    startEpoch and/or endEpoch - If set, only returns alerts that started between the passed in epoch times. It is not necessary to use both parameters.
+    a filter -  A filter consists of 4 regular expressions for group, host, dataSource, and dataPoint repectively, and a level. For example, a filter could be "group=webserver*, host=*.foo.com, dataSource=ping, dataPoint=recdpkts, level=all".
+
+=cut
+
+sub get_alerts {
+    my ($self, %args) = @_;
+
+    my $uri = $self->_get_uri('getAlerts');
+
+    my %params = (
+        host       => 'host',
+        start      => 'startEpoch',
+        end        => 'endEpoch',
+        datapoint  => 'dataPoint',
+        datasource => 'dataSource',
+    );
+
+    foreach my $arg (keys %args) {
+        croak "Unknown arg: $arg" unless exists $params{$arg};
+        $uri->query_param_append($params{$arg}, $args{$arg}) if $args{$arg};
+    }
+
+    $log->debug("Fetching uri: $uri");
+
+    my $res = $self->_ua->get($uri);
+    croak "Failed!\n" unless $res->is_success;
+
+    my $res_decoded = decode_json $res->decoded_content;
+
+    if ($res_decoded->{status} != 200) {
+        croak(
+            sprintf 'Failed to fetch data: [%s] %s',
+            $res_decoded->{status},
+            $res_decoded->{errmsg});
+    }
+
+    return $res_decoded->{data}->{total} == 0
+      ? undef
+      : $res_decoded->{data}->{alerts};
 }
 
 1;
