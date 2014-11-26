@@ -1,5 +1,7 @@
 package WebService::LogicMonitor;
 
+our $VERSION = '0.0';
+
 # ABSTRACT: Interact with LogicMonitor through their web API
 
 use v5.10.1;
@@ -38,7 +40,10 @@ sub _build__lm_auth_hash {
 
 sub _build__ua {
     my $self = shift;
-    return LWP::UserAgent->new(timeout => 10);
+    return LWP::UserAgent->new(
+        timeout => 10,
+        agent   => __PACKAGE__ . "/$VERSION",
+    );
 }
 
 sub _get_uri {
