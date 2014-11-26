@@ -4,6 +4,8 @@ use lib 't/lib';
 
 with 'LogicMonitorTests';
 
+has test_chain => (is => 'ro', default => 'api-test-chain');
+
 test 'escalation chains' => sub {
     my $self = shift;
 
@@ -18,16 +20,16 @@ test 'escalation chains' => sub {
     isa_ok $chain1, 'HASH';
     is_deeply [sort keys %$chain1], $expected_keys;
 
-    ok my $chain = $self->lm->get_escalation_chain_by_name('ioan-test-chain');
+    ok my $chain = $self->lm->get_escalation_chain_by_name($self->test_chain);
     isa_ok $chain, 'HASH';
     is_deeply [sort keys %$chain], $expected_keys;
-    is $chain->{name}, 'ioan-test-chain';
+    is $chain->{name}, $self->test_chain;
 
     my $cur_time = time;
     $chain->{description} = "API Testing [$cur_time]";
     $self->lm->update_escalation_chain($chain);
 
-    ok my $chain2 = $self->lm->get_escalation_chain_by_name('ioan-test-chain');
+    ok my $chain2 = $self->lm->get_escalation_chain_by_name($self->test_chain);
     is $chain2->{description}, "API Testing [$cur_time]";
 
 };
