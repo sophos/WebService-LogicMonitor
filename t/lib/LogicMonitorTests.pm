@@ -13,6 +13,11 @@ sub BUILD {
           'LOGICMONITOR_USER, LOGICMONITOR_PASS and LOGICMONITOR_COMPANY environment variables must be set';
     }
 
+    if ($ENV{LOGICMONITOR_DEBUG}) {
+        require Log::Any::Adapter;
+        Log::Any::Adapter->set('Stderr');
+    }
+
     return;
 }
 
