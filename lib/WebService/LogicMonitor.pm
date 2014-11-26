@@ -17,7 +17,7 @@ use URI;
 
 has lm_password => (is => 'ro', required => 1);
 has lm_username => (is => 'ro', required => 1);
-has lm_company  => (is => 'ro', default  => 'sophos');
+has lm_company  => (is => 'ro', required => 1);
 
 has [qw/_lm_base_url _lm_auth_hash _ua/] => (is => 'lazy');
 

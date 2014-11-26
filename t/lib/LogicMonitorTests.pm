@@ -5,8 +5,12 @@ use Test::Roo::Role;
 
 sub BUILD {
 
-    if (!$ENV{LOGICMONITOR_USER} || !$ENV{LOGICMONITOR_PASS}) {
-        plan skip_all => 'Set LOGICMONITOR_USER and LOGICMONITOR_PASS';
+    if (   !$ENV{LOGICMONITOR_USER}
+        || !$ENV{LOGICMONITOR_PASS}
+        || !$ENV{LOGICMONITOR_COMPANY})
+    {
+        plan skip_all =>
+          'LOGICMONITOR_USER, LOGICMONITOR_PASS and LOGICMONITOR_COMPANY environment variables must be set';
     }
 
     return;
@@ -22,6 +26,7 @@ sub _build_lm {
     my $obj = new_ok 'WebService::LogicMonitor' => [
         lm_username => $ENV{LOGICMONITOR_USER},
         lm_password => $ENV{LOGICMONITOR_PASS},
+        lm_company  => $ENV{LOGICMONITOR_COMPANY},
     ];
 
     return $obj;
