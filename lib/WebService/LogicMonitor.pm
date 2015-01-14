@@ -4,7 +4,7 @@ our $VERSION = '0.0';
 
 # ABSTRACT: Interact with LogicMonitor through their web API
 
-use v5.10.1;
+use v5.10.1;    # minimum for CentOS 6.5
 use Moo;
 use autodie;
 use Carp;
@@ -295,6 +295,88 @@ sub get_alerts {
     return $res_decoded->{data}->{total} == 0
       ? undef
       : $res_decoded->{data}->{alerts};
+}
+
+=method C<get_host(Str displayname)>
+
+Return a host.
+
+=cut
+
+sub get_host {
+    my ($self, $displayname) = @_;
+
+    croak "Missing displayname" unless $displayname;
+
+    my $uri = $self->_get_uri('getHost');
+
+    $uri->query_param_append(displayName => $displayname);
+
+    $log->debug("Fetching uri: $uri");
+
+    my $res = $self->_ua->get($uri);
+    croak "Failed!\n" unless $res->is_success;
+
+    my $res_decoded = decode_json $res->decoded_content;
+
+    if ($res_decoded->{status} != 200) {
+        croak(
+            sprintf 'Failed to fetch data: [%s] %s',
+            $res_decoded->{status},
+            $res_decoded->{errmsg});
+    }
+
+    return $res_decoded->{data};
+}
+
+=method C<get_hosts(Int hostgroupid)>
+
+Return an array of hosts in the group specified by C<group_id>
+
+In scalar context, will return an arrayref of hosts in the group.
+
+In array context, will return the same arrayref plus a hashref of the group.
+
+=cut
+
+sub get_hosts {
+    my ($self, $hostgroupid) = @_;
+
+    croak "Missing hostgroupid" unless $hostgroupid;
+
+    my $uri = $self->_get_uri('getHosts');
+
+    $uri->query_param_append(hostGroupId => $hostgroupid);
+
+    $log->debug("Fetching uri: $uri");
+
+    my $res = $self->_ua->get($uri);
+    croak "Failed!\n" unless $res->is_success;
+
+    my $res_decoded = decode_json $res->decoded_content;
+
+    if ($res_decoded->{status} != 200) {
+        croak(
+            sprintf 'Failed to fetch data: [%s] %s',
+            $res_decoded->{status},
+            $res_decoded->{errmsg});
+    }
+
+    return
+      wantarray
+      ? ($res_decoded->{data}->{hosts}, $res_decoded->{data}->{hostgroup})
+      : $res_decoded->{data}->{hosts};
+}
+
+=method C<get_all_hosts>
+
+Convenience wrapper around L</get_hosts> which returns all hosts. B<BEWARE> This will
+probably take a while.
+
+=cut
+
+sub get_all_hosts {
+    return $_[0]->get_hosts(1);
 }
 
 1;
