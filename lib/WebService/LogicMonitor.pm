@@ -84,11 +84,28 @@ sub _get_data {
 }
 
 sub _send_data {
-    my ($self, $uri) = @_;
+    my ($self, $method, $params) = @_;
+
+    my $uri = $self->_get_uri($method);
+
+    $params = merge $params, $self->_lm_auth_hash;
+    $uri->query_form_hash($params);
+
+    $log->debug('URI: ' . $uri->path_query);
+
     my $res = $self->_ua->get($uri);
     croak "Failed!\n" unless $res->is_success;
+
     my $res_decoded = decode_json $res->decoded_content;
-    return;
+
+    if ($res_decoded->{status} != 200) {
+        croak(
+            sprintf 'Failed to send data: [%s] %s',
+            $res_decoded->{status},
+            $res_decoded->{errmsg});
+    }
+
+    return $res_decoded->{data};
 }
 
 sub get_escalation_chains {
@@ -117,19 +134,15 @@ not sent in the update will be reset to defaults.
 sub update_escalation_chain {
     my ($self, $chain) = @_;
 
-    my $uri = $self->_get_uri('updateEscalatingChain');
+    my $uri = $self->_get_uri();
 
-    my $params = merge $chain, $self->_lm_auth_hash;
+    my $params = $chain;
 
     if ($params->{destination}) {
         $params->{destination} = encode_json $params->{destination};
     }
 
-    $uri->query_form_hash($params);
-
-    $log->debug('URI: ' . $uri->path_query);
-
-    return $self->_send_data($uri);
+    return $self->_send_data('updateEscalatingChain', $params);
 }
 
 sub get_accounts {
@@ -302,6 +315,143 @@ probably take a while.
 
 sub get_all_hosts {
     return $_[0]->get_hosts(1);
+}
+
+=method C<get_host_groups(Str name?)>
+
+Returns an arrayref of all host groups. 
+
+L<http://help.logicmonitor.com/developers-guide/manage-host-group/#list>
+
+If a string argument is passed, only those hostgroups matching C<qr/$string/i>
+will be returned, or undef if there are none.
+
+=cut
+
+sub get_host_groups {
+    my ($self, $name) = @_;
+
+    my $hosts = $self->_get_data('getHostGroups');
+
+    if (!defined $name) {
+        return $hosts;
+    }
+    $log->debug("Filtering hosts by name: [$name]");
+    $log->debug('Number of hosts found: ' . scalar @$hosts);
+    my @matching_hosts = grep { $_->{name} =~ /$name/i } @$hosts;
+    $log->debug('Number of hosts after filter: ' . scalar @matching_hosts);
+
+    return \@matching_hosts;
+}
+
+=method C<get_host_group(Int hostgroupid, Bool inherited=0)>
+
+Returns an hashref of a host group.
+
+L<http://help.logicmonitor.com/developers-guide/manage-host-group/#details>
+
+While LoMo will return C<properties> as an arrayref of hashes like:
+  
+  [ { name => 'something', value => 'blah'}, ]
+
+this method will convert to a hashref:
+
+ { something => 'blah'}
+
+=cut
+
+sub get_host_group {
+    my ($self, $hostgroupid, $inherited) = @_;
+
+    croak "Missing hostgroupid" unless $hostgroupid;
+    $inherited = 0 unless defined $inherited;
+
+    my $data = $self->_get_data(
+        'getHostGroup',
+        hostGroupId       => $hostgroupid,
+        onlyOwnProperties => $inherited
+    );
+
+    my $props = delete $data->{properties};
+    foreach my $prop (@{$props}) {
+        $data->{properties}->{$prop->{name}} = $prop->{value};
+    }
+
+    return $data;
+}
+
+=method C<get_host_group_children(Int hostgroupid)>
+
+Gets the children host groups of C<$hostgroupid>.
+
+In scalar context, will return an arrayref of child groups.
+
+In array context, will return the same arrayref plus a hashref of the parent group.
+
+L<http://help.logicmonitor.com/developers-guide/manage-host-group/#children>
+
+=cut
+
+sub get_host_group_children {
+    my ($self, $hostgroupid) = @_;
+
+    croak "Missing hostgroupid" unless $hostgroupid;
+
+    my $data =
+      $self->_get_data('getHostGroupChildren', hostGroupId => $hostgroupid);
+
+    return wantarray
+      ? ($data->{items}, $data->{group})
+      : $data->{items};
+}
+
+=method C<update_host_group(Int hostgroupid)>
+
+Update host group C<$hostgroupid>.
+
+L<http://help.logicmonitor.com/developers-guide/manage-host-group/#update>
+
+According to LoMo docs, this should return the updated hostgroup in the
+same format as C<getHostGroup>, but there are different keys and properties is missing.
+
+Even if you are only wanting to add a property, anything not set will be reset.
+=cut
+
+sub update_host_group {
+    my ($self, $hostgroupid, %args) = @_;
+
+    # TODO improve this by passing a group hashref instead of $hostgroup id
+    # and copying over any relevant keys
+
+    # TODO make convenience wrapper different opType, e,g add_property_to_host_group
+    croak "Missing hostgroupid" unless $hostgroupid;
+    croak "Missing name" unless $args{name};
+
+    # first, get the required params
+    my $params = {
+        id   => $hostgroupid,
+        name => delete $args{name},
+    };
+
+    # then get properties because they need to be formatted
+    my $properties = delete $args{properties};
+
+    if ($properties) {
+        if (ref $properties ne 'HASH') {
+            croak 'properties should be specified as a hashref';
+        }
+
+        my $i = 0;
+        while (my ($k, $v) = each %$properties) {
+            $params->{"propName$i"}  = $k;
+            $params->{"propValue$i"} = $v;
+            $i++;
+        }
+    }
+
+    # get get the rest of the args
+    $params = merge $params, \%args;
+    return $self->_send_data('updateHostGroup', $params);
 }
 
 1;
