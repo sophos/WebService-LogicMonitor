@@ -13,10 +13,6 @@ test 'get alerts' => sub {
 
     my $alerts;
 
-    like exception {
-        $alerts = $self->lm->get_alerts(badparam => 'wtf')
-    }, qr/^Unknown arg: badparam/, 'Invalid param';
-
     is exception { $alerts = $self->lm->get_alerts }, undef,
       'got all the alerts';
     isa_ok $alerts, 'ARRAY';

@@ -57,10 +57,17 @@ sub _get_uri {
 }
 
 sub _get_data {
-    my ($self, $method) = @_;
+    my ($self, $method, %params) = @_;
 
     my $uri = $self->_get_uri($method);
 
+    if (%params) {
+        foreach my $param (keys %params) {
+            $uri->query_param_append($param, $params{$param});
+        }
+    }
+
+    $log->debug('URI: ' . $uri->path_query);
     my $res = $self->_ua->get($uri);
     croak "Failed!\n" unless $res->is_success;
 
@@ -230,71 +237,23 @@ sub get_data {
     return $data;
 }
 
-=method C<get_alerts>
-    boolean includeInactive=false,
-    boolean needTotal=false,
-    boolean needMessage=false,
-    int startEpoch=0,
-    int endEpoch=0,
-    int results=0,
-    int id=""&String type=alert|eventalert|batchjobalert,
-    String ackFilter="all" | "acked" | "nonacked",
-    String filterSDT="true" | "false",
-    String group="",
-    int hostGroupId=0
-    String host="",
-    int hostId=0,
-    String dataSource,
-    String dataPoint,
-    String level="all"|"warn"|"error"|"critical",
-    String orderBy="host"|"dataSource"|"dataPoint"|"level"|"ackedOn"| "startOn"|"endOn",
-    String orderDirection="asc"|"desc"
+=method C<get_alerts(...)>
 
-    id - A list of alert IDs, such as "1,2,3,99". (You must also specify the alert type)
-    group or hostGroupId - Returns all alerts of the specified group.
-    host or hostId - Returns all alerts of the specified host. If using host, use the display name of your host.
-    dataSource - Returns all alerts for instances of a specified datasource.
-    dataPoint - Returns all alerts for instances of a specified datasource datapoint.
-    startEpoch and/or endEpoch - If set, only returns alerts that started between the passed in epoch times. It is not necessary to use both parameters.
-    a filter -  A filter consists of 4 regular expressions for group, host, dataSource, and dataPoint repectively, and a level. For example, a filter could be "group=webserver*, host=*.foo.com, dataSource=ping, dataPoint=recdpkts, level=all".
+Returns an arrayref of alerts or undef if none found.
+
+See L<http://help.logicmonitor.com/developers-guide/manage-alerts/> for
+what parameters are available to filter the alerts.
 
 =cut
 
 sub get_alerts {
-    my ($self, %args) = @_;
+    my $self = shift;
 
-    my $uri = $self->_get_uri('getAlerts');
+    my $data = $self->_get_data('getAlerts', @_);
 
-    my %params = (
-        host       => 'host',
-        start      => 'startEpoch',
-        end        => 'endEpoch',
-        datapoint  => 'dataPoint',
-        datasource => 'dataSource',
-    );
-
-    foreach my $arg (keys %args) {
-        croak "Unknown arg: $arg" unless exists $params{$arg};
-        $uri->query_param_append($params{$arg}, $args{$arg}) if $args{$arg};
-    }
-
-    $log->debug("Fetching uri: $uri");
-
-    my $res = $self->_ua->get($uri);
-    croak "Failed!\n" unless $res->is_success;
-
-    my $res_decoded = decode_json $res->decoded_content;
-
-    if ($res_decoded->{status} != 200) {
-        croak(
-            sprintf 'Failed to fetch data: [%s] %s',
-            $res_decoded->{status},
-            $res_decoded->{errmsg});
-    }
-
-    return $res_decoded->{data}->{total} == 0
+    return $data->{total} == 0
       ? undef
-      : $res_decoded->{data}->{alerts};
+      : $data->{alerts};
 }
 
 =method C<get_host(Str displayname)>
@@ -308,25 +267,8 @@ sub get_host {
 
     croak "Missing displayname" unless $displayname;
 
-    my $uri = $self->_get_uri('getHost');
+    return $self->_get_data('getHost', displayName => $displayname);
 
-    $uri->query_param_append(displayName => $displayname);
-
-    $log->debug("Fetching uri: $uri");
-
-    my $res = $self->_ua->get($uri);
-    croak "Failed!\n" unless $res->is_success;
-
-    my $res_decoded = decode_json $res->decoded_content;
-
-    if ($res_decoded->{status} != 200) {
-        croak(
-            sprintf 'Failed to fetch data: [%s] %s',
-            $res_decoded->{status},
-            $res_decoded->{errmsg});
-    }
-
-    return $res_decoded->{data};
 }
 
 =method C<get_hosts(Int hostgroupid)>
@@ -344,28 +286,11 @@ sub get_hosts {
 
     croak "Missing hostgroupid" unless $hostgroupid;
 
-    my $uri = $self->_get_uri('getHosts');
+    my $data = $self->_get_data('getHosts', hostGroupId => $hostgroupid);
 
-    $uri->query_param_append(hostGroupId => $hostgroupid);
-
-    $log->debug("Fetching uri: $uri");
-
-    my $res = $self->_ua->get($uri);
-    croak "Failed!\n" unless $res->is_success;
-
-    my $res_decoded = decode_json $res->decoded_content;
-
-    if ($res_decoded->{status} != 200) {
-        croak(
-            sprintf 'Failed to fetch data: [%s] %s',
-            $res_decoded->{status},
-            $res_decoded->{errmsg});
-    }
-
-    return
-      wantarray
-      ? ($res_decoded->{data}->{hosts}, $res_decoded->{data}->{hostgroup})
-      : $res_decoded->{data}->{hosts};
+    return wantarray
+      ? ($data->{hosts}, $data->{hostgroup})
+      : $data->{hosts};
 }
 
 =method C<get_all_hosts>
