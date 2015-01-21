@@ -320,6 +320,73 @@ sub get_all_hosts {
     return $_[0]->get_hosts(1);
 }
 
+=method C<update_host(Int host_id)>
+
+Update a host identified by C<$host_id>.
+
+L<http://help.logicmonitor.com/developers-guide/manage-hosts/#update>
+
+=cut
+
+# hostName
+# displayedAs
+# id
+# agentId
+
+# description
+# alertEnable
+# link
+# enableNetflow
+# netflowAgentId  string  Required if Netflow is enabled
+# opType  String  (Optional) add|replace|refresh (default)
+
+# hostGroupIds
+
+sub update_host {
+    my ($self, $host_id, %args) = @_;
+
+    croak "Missing host_id" unless $host_id;
+    croak "Missing name" unless $args{name};
+
+    # first, get the required params
+    my $params = {
+        id       => $host_id,
+        hostName => delete $args{name},
+    };
+
+    # then get properties because they need to be formatted
+    my $properties = delete $args{properties};
+
+    if ($properties) {
+        if (ref $properties ne 'HASH') {
+            croak 'properties should be specified as a hashref';
+        }
+
+        my $i = 0;
+        while (my ($k, $v) = each %$properties) {
+            $params->{"propName$i"}  = $k;
+            $params->{"propValue$i"} = $v;
+            $i++;
+        }
+    }
+
+    # convert fullPathInIds to hostGroupIds
+    # TODO allow user to set hostGroupIds
+    if ($args{fullPathInIds}) {
+        my @hostgroup_ids;
+        foreach my $full_path (@{$args{fullPathInIds}}) {
+            push @hostgroup_ids, $full_path->[-1];
+        }
+        $args{hostGroupIds} = join ',', @hostgroup_ids;
+        delete $args{fullPathInIds};
+    }
+
+    # get the rest of the args
+    $params = merge $params, \%args;
+
+    return $self->_send_data('updateHost', $params);
+}
+
 =method C<get_data_source_instances(Int host_id, Str data_source_name)>
 
 Return an array of data source instances on the host specified by C<$host_id>
@@ -473,7 +540,7 @@ sub update_host_group {
         }
     }
 
-    # get get the rest of the args
+    # get the rest of the args
     $params = merge $params, \%args;
     return $self->_send_data('updateHostGroup', $params);
 }

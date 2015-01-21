@@ -3,6 +3,7 @@ use Test::Roo;
 use lib 't/lib';
 
 use Test::Fatal;
+use Test::Deep;
 
 with 'LogicMonitorTests';
 
@@ -114,6 +115,48 @@ test 'get data source instances' => sub {
 
     isa_ok $instances, 'ARRAY';
     is_deeply [sort keys %{$instances->[0]}], $self->instance_keys;
+};
+
+test 'update a host' => sub {
+    my $self = shift;
+
+    my $host;
+    is(
+        exception { $host = $self->lm->get_host('test1'); },
+        undef, 'Retrieved host',
+    );
+
+    like(
+        exception { $self->lm->update_host; },
+        qr/Missing host_id/,
+        'Fails without a host_id',
+    );
+
+    my $host2;
+    is(
+        exception {
+            $host2 = $self->lm->update_host(
+                $host->{id},
+                opType        => 'replace',
+                name          => $host->{name},
+                displayedAs   => $host->{displayedAs},
+                agentId       => $host->{agentId},
+                fullPathInIds => $host->{fullPathInIds},
+
+                #properties => { 'system.virtualization' => 'LXC' },
+                properties => {'system.categories' => 'channelserver'},
+            );
+        },
+        undef,
+        'Updated hosts',
+    );
+
+    is(
+        exception { $host2 = $self->lm->get_host('test1'); },
+        undef, 'Retrieved host',
+    );
+
+    cmp_deeply $host, $host2, 'Old host and new host match';
 };
 
 run_me;
