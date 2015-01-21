@@ -18,6 +18,16 @@ has expected_keys => (
     },
 );
 
+has instance_keys => (
+    is      => 'ro',
+    default => sub {
+        [
+            sort
+              qw/alertEnable dataSourceDisplayedAs dataSourceId description discoveryInstanceId enabled hasAlert hasGraph hasUnConfirmedAlert hostDataSourceId hostId id name wildalias wildvalue wildvalue2/
+        ];
+    },
+);
+
 test 'one host' => sub {
     my $self = shift;
 
@@ -77,6 +87,34 @@ test 'multiple hosts by group' => sub {
 
 #     isa_ok $hosts, 'ARRAY';
 # };
+
+test 'get data source instances' => sub {
+    my $self = shift;
+
+    like(
+        exception { $self->lm->get_data_source_instances; },
+        qr/Missing host_id/,
+        'Fails without a host_id',
+    );
+
+    like(
+        exception { $self->lm->get_data_source_instances(12); },
+        qr/Missing data_source_name/,
+        'Fails without a data_source_name',
+    );
+
+    my $instances;
+    is(
+        exception {
+            $instances = $self->lm->get_data_source_instances(12, 'Ping');
+        },
+        undef,
+        'Retrieved instance list',
+    );
+
+    isa_ok $instances, 'ARRAY';
+    is_deeply [sort keys %{$instances->[0]}], $self->instance_keys;
+};
 
 run_me;
 done_testing;
