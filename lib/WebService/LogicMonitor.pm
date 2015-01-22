@@ -443,7 +443,7 @@ sub get_host_groups {
 
     $log->debug('Number of hosts after filter: ' . scalar @matching_hosts);
 
-    return \@matching_hosts;
+    return @matching_hosts ? \@matching_hosts : undef;
 }
 
 =method C<get_host_group(Int hostgroupid, Bool inherited=0)>
