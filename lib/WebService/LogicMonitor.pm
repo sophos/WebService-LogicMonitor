@@ -408,14 +408,15 @@ sub get_data_source_instances {
     );
 }
 
-=method C<get_host_groups(Str name?)>
+=method C<get_host_groups(Str|Regexp filter?)>
 
 Returns an arrayref of all host groups. 
 
 L<http://help.logicmonitor.com/developers-guide/manage-host-group/#list>
 
-If a string argument is passed, only those hostgroups matching C<qr/$string/i>
-will be returned, or undef if there are none.
+Optionally takes a string or regexp as an argument. Only those hostgroups with names
+matching the argument will be returned, or undef if there are none. If the arg is a string,
+it must be an exact match with C<eq>.
 
 =cut
 
@@ -427,9 +428,19 @@ sub get_host_groups {
     if (!defined $name) {
         return $hosts;
     }
+
     $log->debug("Filtering hosts by name: [$name]");
     $log->debug('Number of hosts found: ' . scalar @$hosts);
-    my @matching_hosts = grep { $_->{name} =~ /$name/i } @$hosts;
+    my @matching_hosts;
+
+    if (ref $name eq 'Regexp') {
+        $log->debug('Filter is a regexp');
+        @matching_hosts = grep { $_->{name} =~ $name } @$hosts;
+    } else {
+        $log->debug('Filter is a string');
+        @matching_hosts = grep { $_->{name} eq $name } @$hosts;
+    }
+
     $log->debug('Number of hosts after filter: ' . scalar @matching_hosts);
 
     return \@matching_hosts;
