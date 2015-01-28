@@ -375,8 +375,15 @@ sub update_host {
     if ($args{fullPathInIds}) {
         my @hostgroup_ids;
         foreach my $full_path (@{$args{fullPathInIds}}) {
-            push @hostgroup_ids, $full_path->[-1];
+            my $hg_id = $full_path->[-1];
+
+            # filter out any autogroups
+            my $hg = $self->get_host_group($hg_id);
+            next if $hg->{appliesTo};
+
+            push @hostgroup_ids, $hg_id;
         }
+
         $args{hostGroupIds} = join ',', @hostgroup_ids;
         delete $args{fullPathInIds};
     }
