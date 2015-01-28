@@ -138,7 +138,7 @@ test 'update a host' => sub {
             $host2 = $self->lm->update_host(
                 $host->{id},
                 opType        => 'replace',
-                name          => $host->{name},
+                hostName      => $host->{hostName},
                 displayedAs   => $host->{displayedAs},
                 agentId       => $host->{agentId},
                 fullPathInIds => $host->{fullPathInIds},

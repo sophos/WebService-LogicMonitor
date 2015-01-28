@@ -345,14 +345,22 @@ L<http://help.logicmonitor.com/developers-guide/manage-hosts/#update>
 sub update_host {
     my ($self, $host_id, %args) = @_;
 
-    croak "Missing host_id" unless $host_id;
-    croak "Missing name" unless $args{name};
+    croak "Missing host_id"     unless $host_id;
+    croak "Missing hostName"    unless $args{hostName};
+    croak "Missing displayedAs" unless $args{displayedAs};
+    croak "Missing agentId"     unless $args{agentId};
+
+    my @optional_params = qw/description alertEnable link enableNetflow/;
+    for my $param (@optional_params) {
+        if (!exists $args{$param}) {
+            $log->warning("Missing param [$param] may be reset to defaults");
+        }
+    }
+
+    # netflowAgentId
 
     # first, get the required params
-    my $params = {
-        id       => $host_id,
-        hostName => delete $args{name},
-    };
+    my $params = {id => $host_id,};
 
     # then get properties because they need to be formatted
     my $properties = delete $args{properties};
