@@ -22,6 +22,7 @@ BuildRequires: perl(Hash::Merge)
 BuildRequires: perl(List::Util)
 BuildRequires: perl(Test::Fatal)
 BuildRequires: perl(Test::Deep)
+BuildRequires: perl(DateTime)
 Requires:      perl(:MODULE_COMPAT_%(eval "`%{__perl} -V:version`"; echo $version))
 Requires:      perl(Moo)
 Requires:      perl(Log::Any)
@@ -31,6 +32,7 @@ Requires:      perl(JSON)
 Requires:      perl(LWP::UserAgent)
 Requires:      perl(Hash::Merge)
 Requires:      perl(List::Util)
+Requires:      perl(List::MoreUtils)
 
 %description
 <% $zilla->abstract %>
