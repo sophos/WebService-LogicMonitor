@@ -138,8 +138,10 @@ sub update_escalation_chain {
 
     my $params = $chain;
 
-    if ($params->{destination}) {
-        $params->{destination} = encode_json $params->{destination};
+    foreach my $key (qw/destination ccdestination/) {
+        if ($params->{$key}) {
+            $params->{$key} = encode_json $params->{$key};
+        }
     }
 
     return $self->_send_data('updateEscalatingChain', $params);
