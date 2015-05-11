@@ -427,7 +427,7 @@ sub get_data_source_instances {
 
 =method C<get_host_groups(Str|Regexp filter?)>
 
-Returns an arrayref of all host groups. 
+Returns an arrayref of all host groups.
 
 L<http://help.logicmonitor.com/developers-guide/manage-host-group/#list>
 
@@ -438,7 +438,7 @@ it must be an exact match with C<eq>.
 =cut
 
 sub get_host_groups {
-    my ($self, $name) = @_;
+    my ($self, $key, $name) = @_;
 
     my $hosts = $self->_get_data('getHostGroups');
 
@@ -452,10 +452,10 @@ sub get_host_groups {
 
     if (ref $name eq 'Regexp') {
         $log->debug('Filter is a regexp');
-        @matching_hosts = grep { $_->{name} =~ $name } @$hosts;
+        @matching_hosts = grep { $_->{$key} =~ $name } @$hosts;
     } else {
         $log->debug('Filter is a string');
-        @matching_hosts = grep { $_->{name} eq $name } @$hosts;
+        @matching_hosts = grep { $_->{$key} eq $name } @$hosts;
     }
 
     $log->debug('Number of hosts after filter: ' . scalar @matching_hosts);
@@ -470,7 +470,7 @@ Returns an hashref of a host group.
 L<http://help.logicmonitor.com/developers-guide/manage-host-group/#details>
 
 While LoMo will return C<properties> as an arrayref of hashes like:
-  
+
   [ { name => 'something', value => 'blah'}, ]
 
 this method will convert to a hashref:
