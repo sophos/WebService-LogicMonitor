@@ -1,5 +1,6 @@
 [PerlTidy]
 select = **/*.{pm,t}
+select = scripts/*
 argv = --profile=$ROOT/.perltidyrc
 
 [PerlCritic]
