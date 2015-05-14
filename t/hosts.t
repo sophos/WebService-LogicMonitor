@@ -150,12 +150,15 @@ test 'update a host' => sub {
         undef,
         'Updated hosts',
     );
+    $host->{autoPropsAssignedOn} = time;
 
     is(
         exception { $host2 = $self->lm->get_host('test1'); },
         undef, 'Retrieved host',
     );
 
+    delete $host->{autoPropsUpdatedOn};
+    delete $host2->{autoPropsUpdatedOn};
     cmp_deeply $host, $host2, 'Old host and new host match';
 };
 
