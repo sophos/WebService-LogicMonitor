@@ -14,7 +14,7 @@ has expected_keys => (
             qw/agentDescription agentId alertEnable autoPropsAssignedOn autoPropsUpdatedOn
               createdOn description deviceType displayedAs effectiveAlertEnabled enableNetflow
               fullPathInIds hostName id inSDT isActive lastdatatime lastrawdatatime link name
-              netflowAgentId properties scanConfigId status type updatedOn/
+              netflowAgentId properties relatedDeviceId scanConfigId status type updatedOn/
         ];
     },
 );
