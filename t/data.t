@@ -84,8 +84,9 @@ test 'get data one month' => sub {
 
     isa_ok $data, 'ARRAY';
 
-    #    use Data::Printer; p $data;
-    is scalar @$data, 60, '60 values in array';
+    # XXX data contains one entry per 12h40m
+    ok scalar @$data <= 61 && scalar @$data >= 59, '59 - 61 values in array';
+
     is_deeply [sort keys %{$data->[0]->{values}}],
       \@{$self->expected_datapoints}, 'Got all expected keys';
 };
