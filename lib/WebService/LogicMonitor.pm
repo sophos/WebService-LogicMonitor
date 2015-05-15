@@ -134,8 +134,6 @@ not sent in the update will be reset to defaults.
 sub update_escalation_chain {
     my ($self, $chain) = @_;
 
-    my $uri = $self->_get_uri();
-
     my $params = $chain;
 
     foreach my $key (qw/destination ccdestination/) {
