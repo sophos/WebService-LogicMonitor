@@ -571,4 +571,94 @@ sub update_host_group {
     return $self->_send_data('updateHostGroup', $params);
 }
 
+=method C<get_sdts(Str key?, Int id?)>
+
+Returns an array of SDT hashes. With no args, it will return all SDTs in the
+account. See the LoMo docs for details on what keys are supported.
+
+L<http://help.logicmonitor.com/developers-guide/schedule-down-time/get-sdt-data/>
+
+=cut
+
+sub get_sdts {
+    my ($self, $key, $id) = @_;
+
+    my $data;
+    if ($key) {
+        defined $id or croak 'Can not specify a key without an id';
+        $data = $self->_get_data('getSDTs', $key => $id);
+    } else {
+        $data = $self->_get_data('getSDTs');
+    }
+
+    return $data;
+}
+
+=method C<set_sdt(Str entity, Int|Str id, Int type, DateTime|Hashref start, DateTime|Hashref end, Str comment?)>
+
+Sets SDT for an entity. Entity can be
+
+  Host
+  HostGroup
+  HostDataSource
+  DataSourceInstance
+  HostDataSourceInstanceGroup
+  Agent
+
+The id for Host can be either an id number or hostname string.
+
+To simplify calling this we take two keys, C<start> and C<end> which must
+be DateTime objects.
+
+L<http://help.logicmonitor.com/developers-guide/schedule-down-time/set-sdt-data/>
+
+=cut
+
+sub set_sdt {
+    my ($self, $entity, $id, %args) = @_;
+
+    # generate the method name and id key from entity
+    my $method = 'set' . $entity . 'SDT';
+    my $id_key;
+
+    if ($id =~ /^\d+$/) {
+        $id_key = lcfirst $entity . 'Id';
+    } elsif ($entity eq 'Host') {
+        $id_key = 'host';
+    } else {
+        croak "Invalid parameters - $entity => $id";
+    }
+
+    if (exists $args{type} && $args{type} != 1) {
+        croak 'We only handle one-time SDTs right now';
+    }
+
+    my $params = {
+        $id_key => $id,
+        type    => $args{type},
+    };
+
+    $params->{comment} = $args{comment} if exists $args{comment};
+
+    croak 'Missing start time' unless $args{start};
+    croak 'Missing end time'   unless $args{end};
+
+    # LoMo expects months to be 0..11
+    if (ref $args{start} eq 'DateTime') {
+        my $dt = $args{start};
+
+        @$params{(qw/year month day hour minute/)} =
+          ($dt->year, ($dt->month - 1), $dt->day, $dt->hour, $dt->minute);
+    }
+
+    if (ref $args{end} eq 'DateTime') {
+        my $dt = $args{end};
+
+        @$params{(qw/endYear endMonth endDay endHour endMinute/)} =
+          ($dt->year, ($dt->month - 1), $dt->day, $dt->hour, $dt->minute);
+    }
+
+    return $self->_send_data($method, $params);
+}
+
 1;
