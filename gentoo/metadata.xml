@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<pkgmetadata>
+    <herd>perl</herd>
+    <maintainer>
+        <email>ioan.rogers@sophos.com</email>
+        <name>Ioan Rogers</name>
+    </maintainer>
+    
+    <upstream>
+        <remote-id type="cpan">WebService-LogicMonitor</remote-id>
+        <remote-id type="cpan-module">WebService::LogicMonitor</remote-id>
+<remote-id type="cpan-module">LogicMonitorTests</remote-id>
+
+
+    </upstream>
+</pkgmetadata>

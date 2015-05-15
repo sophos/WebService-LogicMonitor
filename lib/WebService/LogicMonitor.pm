@@ -1,6 +1,6 @@
 package WebService::LogicMonitor;
 
-our $VERSION = '0.0';
+our $VERSION = '0.151350';
 
 # ABSTRACT: Interact with LogicMonitor through their web API
 
@@ -125,12 +125,6 @@ sub get_escalation_chain_by_name {
     return $chain;
 }
 
-=method C<update_escalation_chain(HashRef $chain)>
-
-id and name are the minimum to update a chain, but everything else that is
-not sent in the update will be reset to defaults.
-
-=cut
 
 sub update_escalation_chain {
     my ($self, $chain) = @_;
@@ -164,17 +158,6 @@ sub get_account_by_email {
     return $account;
 }
 
-=method C<get_data>
-  host    string  The display name of the host
-  dataSourceInstance  string  The Unique name of the DataSource Instance
-  period  string  The time period to Download Data from. Valid inputs include nhours, ndays, nweeks, nmonths, or nyears (ex. 2hours)
-  dataPoint{0-n}  string  The unique name of the Datapoint
-  start, end  long    Epoch Time in seconds
-  graphId integer (Optional) The Unique ID of the Datasource Instance Graph
-  graph   string  (Optional) The Unique Graph Name
-  aggregate   string  (Optional- defaults to null) Take the "AVERAGE", "MAX", "MIN", or "LAST" of your data
-  overviewGraph   string  The name of the Overview Graph to get data from
-=cut
 
 sub get_data {
     my ($self, %args) = @_;
@@ -251,14 +234,6 @@ sub get_data {
     return $data;
 }
 
-=method C<get_alerts(...)>
-
-Returns an arrayref of alerts or undef if none found.
-
-See L<http://help.logicmonitor.com/developers-guide/manage-alerts/> for
-what parameters are available to filter the alerts.
-
-=cut
 
 sub get_alerts {
     my $self = shift;
@@ -270,13 +245,6 @@ sub get_alerts {
       : $data->{alerts};
 }
 
-=method C<get_host(Str displayname)>
-
-Return a host.
-
-L<http://help.logicmonitor.com/developers-guide/manage-hosts/#get1>
-
-=cut
 
 sub get_host {
     my ($self, $displayname) = @_;
@@ -286,17 +254,6 @@ sub get_host {
     return $self->_get_data('getHost', displayName => $displayname);
 }
 
-=method C<get_hosts(Int hostgroupid)>
-
-Return an array of hosts in the group specified by C<group_id>
-
-L<http://help.logicmonitor.com/developers-guide/manage-hosts/#get1>
-
-In scalar context, will return an arrayref of hosts in the group.
-
-In array context, will return the same arrayref plus a hashref of the group.
-
-=cut
 
 sub get_hosts {
     my ($self, $hostgroupid) = @_;
@@ -310,24 +267,11 @@ sub get_hosts {
       : $data->{hosts};
 }
 
-=method C<get_all_hosts>
-
-Convenience wrapper around L</get_hosts> which returns all hosts. B<BEWARE> This will
-probably take a while.
-
-=cut
 
 sub get_all_hosts {
     return $_[0]->get_hosts(1);
 }
 
-=method C<update_host(Int host_id)>
-
-Update a host identified by C<$host_id>.
-
-L<http://help.logicmonitor.com/developers-guide/manage-hosts/#update>
-
-=cut
 
 # hostName
 # displayedAs
@@ -403,13 +347,6 @@ sub update_host {
     return $self->_send_data('updateHost', $params);
 }
 
-=method C<get_data_source_instances(Int host_id, Str data_source_name)>
-
-Return an array of data source instances on the host specified by C<$host_id>
-
-L<http://help.logicmonitor.com/developers-guide/manage-hosts/#instances>
-
-=cut
 
 sub get_data_source_instances {
     my ($self, $host_id, $data_source_name) = @_;
@@ -424,17 +361,6 @@ sub get_data_source_instances {
     );
 }
 
-=method C<get_host_groups(Str|Regexp filter?)>
-
-Returns an arrayref of all host groups.
-
-L<http://help.logicmonitor.com/developers-guide/manage-host-group/#list>
-
-Optionally takes a string or regexp as an argument. Only those hostgroups with names
-matching the argument will be returned, or undef if there are none. If the arg is a string,
-it must be an exact match with C<eq>.
-
-=cut
 
 sub get_host_groups {
     my ($self, $key, $name) = @_;
@@ -462,21 +388,6 @@ sub get_host_groups {
     return @matching_hosts ? \@matching_hosts : undef;
 }
 
-=method C<get_host_group(Int hostgroupid, Bool inherited=0)>
-
-Returns an hashref of a host group.
-
-L<http://help.logicmonitor.com/developers-guide/manage-host-group/#details>
-
-While LoMo will return C<properties> as an arrayref of hashes like:
-
-  [ { name => 'something', value => 'blah'}, ]
-
-this method will convert to a hashref:
-
- { something => 'blah'}
-
-=cut
 
 sub get_host_group {
     my ($self, $hostgroupid, $inherited) = @_;
@@ -498,17 +409,6 @@ sub get_host_group {
     return $data;
 }
 
-=method C<get_host_group_children(Int hostgroupid)>
-
-Gets the children host groups of C<$hostgroupid>.
-
-In scalar context, will return an arrayref of child groups.
-
-In array context, will return the same arrayref plus a hashref of the parent group.
-
-L<http://help.logicmonitor.com/developers-guide/manage-host-group/#children>
-
-=cut
 
 sub get_host_group_children {
     my ($self, $hostgroupid) = @_;
@@ -523,17 +423,6 @@ sub get_host_group_children {
       : $data->{items};
 }
 
-=method C<update_host_group(Int hostgroupid)>
-
-Update host group C<$hostgroupid>.
-
-L<http://help.logicmonitor.com/developers-guide/manage-host-group/#update>
-
-According to LoMo docs, this should return the updated hostgroup in the
-same format as C<getHostGroup>, but there are different keys and properties is missing.
-
-Even if you are only wanting to add a property, anything not set will be reset.
-=cut
 
 sub update_host_group {
     my ($self, $hostgroupid, %args) = @_;
@@ -572,14 +461,6 @@ sub update_host_group {
     return $self->_send_data('updateHostGroup', $params);
 }
 
-=method C<get_sdts(Str key?, Int id?)>
-
-Returns an array of SDT hashes. With no args, it will return all SDTs in the
-account. See the LoMo docs for details on what keys are supported.
-
-L<http://help.logicmonitor.com/developers-guide/schedule-down-time/get-sdt-data/>
-
-=cut
 
 sub get_sdts {
     my ($self, $key, $id) = @_;
@@ -595,25 +476,6 @@ sub get_sdts {
     return $data;
 }
 
-=method C<set_sdt(Str entity, Int|Str id, Int type, DateTime|Hashref start, DateTime|Hashref end, Str comment?)>
-
-Sets SDT for an entity. Entity can be
-
-  Host
-  HostGroup
-  HostDataSource
-  DataSourceInstance
-  HostDataSourceInstanceGroup
-  Agent
-
-The id for Host can be either an id number or hostname string.
-
-To simplify calling this we take two keys, C<start> and C<end> which must
-be DateTime objects.
-
-L<http://help.logicmonitor.com/developers-guide/schedule-down-time/set-sdt-data/>
-
-=cut
 
 sub set_sdt {
     my ($self, $entity, $id, %args) = @_;
@@ -662,11 +524,6 @@ sub set_sdt {
     return $self->_send_data($method, $params);
 }
 
-=method C<set_sdt(Str entity, Int|Str id, $hours, ...)>
-
-Wrapper around L</set_sdt> to quickly set SDT of a specified number of hours.
-
-=cut
 
 sub set_quick_sdt {
     my $self   = shift;
@@ -686,3 +543,175 @@ sub set_quick_sdt {
 }
 
 1;
+
+__END__
+
+=pod
+
+=encoding UTF-8
+
+=for :stopwords Ioan Rogers Sophos
+
+=head1 NAME
+
+WebService::LogicMonitor - Interact with LogicMonitor through their web API
+
+=head1 VERSION
+
+version 0.151350
+
+=head1 METHODS
+
+=head2 C<update_escalation_chain(HashRef $chain)>
+
+id and name are the minimum to update a chain, but everything else that is
+not sent in the update will be reset to defaults.
+
+=head2 C<get_data>
+  host    string  The display name of the host
+  dataSourceInstance  string  The Unique name of the DataSource Instance
+  period  string  The time period to Download Data from. Valid inputs include nhours, ndays, nweeks, nmonths, or nyears (ex. 2hours)
+  dataPoint{0-n}  string  The unique name of the Datapoint
+  start, end  long    Epoch Time in seconds
+  graphId integer (Optional) The Unique ID of the Datasource Instance Graph
+  graph   string  (Optional) The Unique Graph Name
+  aggregate   string  (Optional- defaults to null) Take the "AVERAGE", "MAX", "MIN", or "LAST" of your data
+  overviewGraph   string  The name of the Overview Graph to get data from
+
+=head2 C<get_alerts(...)>
+
+Returns an arrayref of alerts or undef if none found.
+
+See L<http://help.logicmonitor.com/developers-guide/manage-alerts/> for
+what parameters are available to filter the alerts.
+
+=head2 C<get_host(Str displayname)>
+
+Return a host.
+
+L<http://help.logicmonitor.com/developers-guide/manage-hosts/#get1>
+
+=head2 C<get_hosts(Int hostgroupid)>
+
+Return an array of hosts in the group specified by C<group_id>
+
+L<http://help.logicmonitor.com/developers-guide/manage-hosts/#get1>
+
+In scalar context, will return an arrayref of hosts in the group.
+
+In array context, will return the same arrayref plus a hashref of the group.
+
+=head2 C<get_all_hosts>
+
+Convenience wrapper around L</get_hosts> which returns all hosts. B<BEWARE> This will
+probably take a while.
+
+=head2 C<update_host(Int host_id)>
+
+Update a host identified by C<$host_id>.
+
+L<http://help.logicmonitor.com/developers-guide/manage-hosts/#update>
+
+=head2 C<get_data_source_instances(Int host_id, Str data_source_name)>
+
+Return an array of data source instances on the host specified by C<$host_id>
+
+L<http://help.logicmonitor.com/developers-guide/manage-hosts/#instances>
+
+=head2 C<get_host_groups(Str|Regexp filter?)>
+
+Returns an arrayref of all host groups.
+
+L<http://help.logicmonitor.com/developers-guide/manage-host-group/#list>
+
+Optionally takes a string or regexp as an argument. Only those hostgroups with names
+matching the argument will be returned, or undef if there are none. If the arg is a string,
+it must be an exact match with C<eq>.
+
+=head2 C<get_host_group(Int hostgroupid, Bool inherited=0)>
+
+Returns an hashref of a host group.
+
+L<http://help.logicmonitor.com/developers-guide/manage-host-group/#details>
+
+While LoMo will return C<properties> as an arrayref of hashes like:
+
+  [ { name => 'something', value => 'blah'}, ]
+
+this method will convert to a hashref:
+
+ { something => 'blah'}
+
+=head2 C<get_host_group_children(Int hostgroupid)>
+
+Gets the children host groups of C<$hostgroupid>.
+
+In scalar context, will return an arrayref of child groups.
+
+In array context, will return the same arrayref plus a hashref of the parent group.
+
+L<http://help.logicmonitor.com/developers-guide/manage-host-group/#children>
+
+=head2 C<update_host_group(Int hostgroupid)>
+
+Update host group C<$hostgroupid>.
+
+L<http://help.logicmonitor.com/developers-guide/manage-host-group/#update>
+
+According to LoMo docs, this should return the updated hostgroup in the
+same format as C<getHostGroup>, but there are different keys and properties is missing.
+
+Even if you are only wanting to add a property, anything not set will be reset.
+
+=head2 C<get_sdts(Str key?, Int id?)>
+
+Returns an array of SDT hashes. With no args, it will return all SDTs in the
+account. See the LoMo docs for details on what keys are supported.
+
+L<http://help.logicmonitor.com/developers-guide/schedule-down-time/get-sdt-data/>
+
+=head2 C<set_sdt(Str entity, Int|Str id, Int type, DateTime|Hashref start, DateTime|Hashref end, Str comment?)>
+
+Sets SDT for an entity. Entity can be
+
+  Host
+  HostGroup
+  HostDataSource
+  DataSourceInstance
+  HostDataSourceInstanceGroup
+  Agent
+
+The id for Host can be either an id number or hostname string.
+
+To simplify calling this we take two keys, C<start> and C<end> which must
+be DateTime objects.
+
+L<http://help.logicmonitor.com/developers-guide/schedule-down-time/set-sdt-data/>
+
+=head2 C<set_sdt(Str entity, Int|Str id, $hours, ...)>
+
+Wrapper around L</set_sdt> to quickly set SDT of a specified number of hours.
+
+=head1 RESOURCES
+
+The project homepage is at L<https://wiki.sophos.net/dosearchsite.action?startIndex=0&where=conf_all&queryString="WebService-LogicMonitor">.
+
+The bugtracker is at L<https://jira.sophos.net/browse/DINO>.
+
+Source code is available at
+url: L<ssh://git@stash.sophos.net:7999/lm/webservice-logicmonitor.git>
+web: L<https://stash.sophos.net/projects/LM/repos/webservice-logicmonitor>
+
+=head1 AUTHOR
+
+Ioan Rogers <ioan.rogers@sophos.com>
+
+=head1 COPYRIGHT AND LICENSE
+
+This software is Copyright (c) 2014 by Sophos.
+
+This is free software, licensed under:
+
+  The Artistic License 2.0 (GPL Compatible)
+
+=cut

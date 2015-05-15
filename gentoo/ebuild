@@ -1,0 +1,20 @@
+EAPI=5
+
+inherit perl-module
+
+DESCRIPTION=""
+HOMEPAGE="http://portage.labs.sophos"
+SRC_URI="http://portage.labs.sophos/distfiles/${P}.tar.gz"
+
+LICENSE=""
+SLOT="0"
+KEYWORDS="amd64"
+IUSE=""
+
+RDEPEND="
+   >=dev-lang/perl-5.10.1
+"
+
+DEPEND="
+   ${RDEPEND}
+"
