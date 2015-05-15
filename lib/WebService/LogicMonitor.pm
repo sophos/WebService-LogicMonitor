@@ -8,6 +8,7 @@ use v5.10.1;    # minimum for CentOS 6.5
 use Moo;
 use autodie;
 use Carp;
+use DateTime;
 use Hash::Merge 'merge';
 use LWP::UserAgent;
 use JSON;
@@ -659,6 +660,29 @@ sub set_sdt {
     }
 
     return $self->_send_data($method, $params);
+}
+
+=method C<set_sdt(Str entity, Int|Str id, $hours, ...)>
+
+Wrapper around L</set_sdt> to quickly set SDT of a specified number of hours.
+
+=cut
+
+sub set_quick_sdt {
+    my $self   = shift;
+    my $entity = shift;
+    my $id     = shift;
+    my $hours  = shift;
+
+    my $start_dt = DateTime->now(time_zone => 'UTC');
+    my $end_dt = $start_dt->clone->add(hours => $hours);
+
+    return $self->set_sdt(
+        $entity, $id,
+        start => $start_dt,
+        end   => $end_dt,
+        @_
+    );
 }
 
 1;

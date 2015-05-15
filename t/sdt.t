@@ -102,5 +102,27 @@ test sdt => sub {
     is $res->{isEffective}, 1, 'SDT is currently in effect';
 };
 
+test 'quick sdt' => sub {
+    my $self = shift;
+    my $res;
+
+    is(
+        exception {
+            $res = $self->lm->set_quick_sdt(
+                Host => 'test1',
+                2,
+                type    => 1,
+                comment => ('Quick add 2 hour sdt ' . time),
+              )
+        },
+        undef,
+        'Set quick SDT for host',
+    );
+    is_deeply [sort keys %$res], $self->sdt_keys;
+    is $res->{category}->{name}, 'HostSDT', 'Category is HostSDT';
+    is $res->{isEffective}, 1, 'SDT is currently in effect';
+
+};
+
 run_me;
 done_testing;
