@@ -14,23 +14,26 @@ test 'escalation chains' => sub {
           inAlerting name throttlingAlerts throttlingPeriod/
     ];
 
-    ok my $chains = $self->lm->get_escalation_chains;
+    ok my $chains = $self->lm->get_escalation_chains, 'Retrieve all chains';
     isa_ok $chains, 'ARRAY';
     my $chain1 = shift @$chains;
     isa_ok $chain1, 'HASH';
     is_deeply [sort keys %$chain1], $expected_keys;
 
-    ok my $chain = $self->lm->get_escalation_chain_by_name($self->test_chain);
+    ok my $chain = $self->lm->get_escalation_chain_by_name($self->test_chain),
+      'Retrieve one chain by name';
     isa_ok $chain, 'HASH';
     is_deeply [sort keys %$chain], $expected_keys;
     is $chain->{name}, $self->test_chain;
 
     my $cur_time = time;
     $chain->{description} = "API Testing [$cur_time]";
-    $self->lm->update_escalation_chain($chain);
+    ok $self->lm->update_escalation_chain($chain), 'Update chain';
 
-    ok my $chain2 = $self->lm->get_escalation_chain_by_name($self->test_chain);
-    is $chain2->{description}, "API Testing [$cur_time]";
+    ok my $chain2 = $self->lm->get_escalation_chain_by_name($self->test_chain),
+      'Retrieve updated chain';
+    is $chain2->{description}, "API Testing [$cur_time]",
+      'Description has been updated';
 
 };
 
