@@ -41,8 +41,9 @@ test 'get all host groups' => sub {
     my $num_hosts = scalar @$hosts;
 
     is(
-        exception { $hosts = $self->lm->get_host_groups('svc'); },
-        undef, 'Retrieved host groups',
+        exception { $hosts = $self->lm->get_host_groups('name', 'Testing'); },
+        undef,
+        'Retrieved host groups',
     );
 
     isa_ok $hosts, 'ARRAY';
