@@ -686,3 +686,57 @@ sub set_quick_sdt {
 }
 
 1;
+
+__END__
+
+=head1 SYNOPSIS
+
+  use v5.14.1;
+  use strict;
+  use Try::Tiny;
+  use WebService::LogicMonitor;
+
+  # find a hostgroup by name, iterate through its child groups
+  # and check the status of a datasource instance
+  
+  my $lm = WebService::LogicMonitor->new(
+      username => $ENV{LOGICMONITOR_USER},
+      password => $ENV{LOGICMONITOR_PASS},
+      company  => $ENV{LOGICMONITOR_COMPANY},
+  );
+
+  my $datasource = 'Ping';
+  my $host_groups  = try {
+      my $hg = $lm->get_host_groups(name => 'Abingdon');
+      die 'No such host group' unless $hg;
+      $lm->get_host_group_children($hg->[0]{id});
+  } catch {
+      die "Error retrieving host group: $_";
+  };
+
+  die 'Host group has no children' unless $host_groups;
+
+  foreach my $hg (@$host_groups) {
+      say "Checking group: $hg->{name}";
+      my $hosts = $lm->get_hosts($hg->{id});
+
+      foreach my $host (@$hosts) {
+          say "\tChecking host: $host->{hostName}";
+          my $instances = try {
+              $lm->get_data_source_instances($host->{id}, $datasource);
+          }
+          catch {
+              say "Failed to retrieve data source instances: " . $_;
+              return undef;
+          };
+
+          next unless $instances;
+
+          # only one instance
+          my $instance = shift @$instances;
+
+          say "\t\tdatasource status: " . ($instance->{enabled} ? 'enabled' : 'disabled');
+          say "\t\talert status: " . ($instance->{alertEnable} ? 'enabled' : 'disabled');
+          say "\t\tgroup disabled: " . ($instance->{disabledAtGroup} ? "yes: $instance->{disabledAtGroup}" : 'no');
+      }
+  }
