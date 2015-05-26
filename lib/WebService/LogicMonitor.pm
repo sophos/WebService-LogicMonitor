@@ -18,24 +18,24 @@ use Log::Any qw/$log/;
 use URI::QueryParam;
 use URI;
 
-has lm_password => (is => 'ro', required => 1);
-has lm_username => (is => 'ro', required => 1);
-has lm_company  => (is => 'ro', required => 1);
+has password => (is => 'ro', required => 1);
+has username => (is => 'ro', required => 1);
+has company  => (is => 'ro', required => 1);
 
-has [qw/_lm_base_url _lm_auth_hash _ua/] => (is => 'lazy');
+has [qw/_base_url _auth_hash _ua/] => (is => 'lazy');
 
-sub _build__lm_base_url {
+sub _build__base_url {
     my $self = shift;
     return URI->new(sprintf 'https://%s.logicmonitor.com/santaba/rpc',
-        $self->lm_company);
+        $self->company);
 }
 
-sub _build__lm_auth_hash {
+sub _build__auth_hash {
     my $self = shift;
     return {
-        c => $self->lm_company,
-        u => $self->lm_username,
-        p => $self->lm_password
+        c => $self->company,
+        u => $self->username,
+        p => $self->password
     };
 }
 
@@ -50,9 +50,9 @@ sub _build__ua {
 sub _get_uri {
     my ($self, $method) = @_;
 
-    my $uri = $self->_lm_base_url->clone;
+    my $uri = $self->_base_url->clone;
     $uri->path_segments($uri->path_segments, $method);
-    $uri->query_form_hash($self->_lm_auth_hash);
+    $uri->query_form_hash($self->_auth_hash);
     $log->debug('URI: ' . $uri->path_query);
     return $uri;
 }
@@ -89,7 +89,7 @@ sub _send_data {
 
     my $uri = $self->_get_uri($method);
 
-    $params = merge $params, $self->_lm_auth_hash;
+    $params = merge $params, $self->_auth_hash;
     $uri->query_form_hash($params);
 
     $log->debug('URI: ' . $uri->path_query);

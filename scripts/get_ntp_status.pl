@@ -13,9 +13,9 @@ if ($ENV{LOGICMONITOR_DEBUG}) {
 }
 
 my $lm = WebService::LogicMonitor->new(
-    lm_username => $ENV{LOGICMONITOR_USER},
-    lm_password => $ENV{LOGICMONITOR_PASS},
-    lm_company  => $ENV{LOGICMONITOR_COMPANY},
+    username => $ENV{LOGICMONITOR_USER},
+    password => $ENV{LOGICMONITOR_PASS},
+    company  => $ENV{LOGICMONITOR_COMPANY},
 );
 
 # TODO add an exclusion list - hosts we expect datasource to be missing from

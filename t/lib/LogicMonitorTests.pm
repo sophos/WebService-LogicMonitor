@@ -29,9 +29,9 @@ sub _build_lm {
     require_ok 'WebService::LogicMonitor';
 
     my $obj = new_ok 'WebService::LogicMonitor' => [
-        lm_username => $ENV{LOGICMONITOR_USER},
-        lm_password => $ENV{LOGICMONITOR_PASS},
-        lm_company  => $ENV{LOGICMONITOR_COMPANY},
+        username => $ENV{LOGICMONITOR_USER},
+        password => $ENV{LOGICMONITOR_PASS},
+        company  => $ENV{LOGICMONITOR_COMPANY},
     ];
 
     return $obj;

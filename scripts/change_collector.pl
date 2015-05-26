@@ -14,9 +14,9 @@ use WebService::LogicMonitor;
 my $opt = {};
 
 my $lm = WebService::LogicMonitor->new(
-    lm_username => $ENV{LOGICMONITOR_USER},
-    lm_password => $ENV{LOGICMONITOR_PASS},
-    lm_company  => $ENV{LOGICMONITOR_COMPANY},
+    username => $ENV{LOGICMONITOR_USER},
+    password => $ENV{LOGICMONITOR_PASS},
+    company  => $ENV{LOGICMONITOR_COMPANY},
 );
 
 sub get_options {
