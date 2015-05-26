@@ -18,9 +18,14 @@ use Log::Any qw/$log/;
 use URI::QueryParam;
 use URI;
 
-has password => (is => 'ro', required => 1);
-has username => (is => 'ro', required => 1);
-has company  => (is => 'ro', required => 1);
+=attr C<company>, C<username>, C<password>
+
+The CUP authentication details for your LogicMonitor account. See
+L<http://help.logicmonitor.com/developers-guide/authenticating-requests/>
+
+=cut
+
+has [qw/password username company/] => (is => 'ro', required => 1);
 
 has [qw/_base_url _auth_hash _ua/] => (is => 'lazy');
 
@@ -109,11 +114,26 @@ sub _send_data {
     return $res_decoded->{data};
 }
 
+=method C<get_escalation_chains>
+
+Returns an arrayref of all available escalation chains.
+
+L<http://help.logicmonitor.com/developers-guide/manage-escalation-chains/#get1>
+
+=cut
+
 sub get_escalation_chains {
     my $self = shift;
 
     return $self->_get_data('getEscalationChains');
 }
+
+=method C<get_escalation_chain_by_name(Str $name)>
+
+Convenience wrapper aroung L</get_escalation_chains> which only returns chains
+where a C<name eq $name>.
+
+=cut
 
 # TODO name or id
 sub get_escalation_chain_by_name {
@@ -146,11 +166,26 @@ sub update_escalation_chain {
     return $self->_send_data('updateEscalatingChain', $params);
 }
 
+=method C<get_accounts>
+
+Retrieves a complete list of accounts as an arrayref.
+
+L<http://help.logicmonitor.com/developers-guide/manage-user-accounts/#getAccounts>
+
+=cut
+
 sub get_accounts {
     my $self = shift;
 
     return $self->_get_data('getAccounts');
 }
+
+=method C<get_account_by_email(Str $email)>
+
+Convenience wrapper aroung L</get_accounts> which only returns accounts
+matching $email.
+
+=cut
 
 sub get_account_by_email {
     my ($self, $email) = @_;
@@ -662,7 +697,7 @@ sub set_sdt {
     return $self->_send_data($method, $params);
 }
 
-=method C<set_sdt(Str entity, Int|Str id, $hours, ...)>
+=method C<set_quick_sdt(Str entity, Int|Str id, $hours, ...)>
 
 Wrapper around L</set_sdt> to quickly set SDT of a specified number of hours.
 
@@ -698,7 +733,7 @@ __END__
 
   # find a hostgroup by name, iterate through its child groups
   # and check the status of a datasource instance
-  
+
   my $lm = WebService::LogicMonitor->new(
       username => $ENV{LOGICMONITOR_USER},
       password => $ENV{LOGICMONITOR_PASS},
