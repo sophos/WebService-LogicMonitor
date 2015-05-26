@@ -3,8 +3,6 @@ select = **/*.{pm,t}
 select = scripts/*
 argv = --profile=$ROOT/.perltidyrc
 
-[PerlCritic]
-select = **/*.{pm}
-argv = --profile=$ROOT/.perlcriticrc --stern
-
+[Perl::AlignMooseAttributes]
+select = **/*.pm
 
