@@ -4,8 +4,7 @@ our $VERSION = '0.0';
 
 # ABSTRACT: Interact with LogicMonitor through their web API
 
-use v5.10.1;    # minimum for CentOS 6.5
-use Moo;
+use v5.16.3;    # minimum for CentOS 7
 use autodie;
 use Carp;
 use DateTime;
@@ -17,6 +16,8 @@ use List::MoreUtils 'zip';
 use Log::Any qw/$log/;
 use URI::QueryParam;
 use URI;
+use WebService::LogicMonitor::EscalationChain;
+use Moo;
 
 =attr C<company>, C<username>, C<password>
 
@@ -125,7 +126,15 @@ L<http://help.logicmonitor.com/developers-guide/manage-escalation-chains/#get1>
 sub get_escalation_chains {
     my $self = shift;
 
-    return $self->_get_data('getEscalationChains');
+    my $data = $self->_get_data('getEscalationChains');
+
+    my @chains;
+    foreach my $chain (@$data) {
+        $chain->{_lm} = $self;
+        push @chains, WebService::LogicMonitor::EscalationChain->new($chain);
+    }
+
+    return \@chains;
 }
 
 =method C<get_escalation_chain_by_name(Str $name)>
@@ -143,27 +152,6 @@ sub get_escalation_chain_by_name {
 
     my $chain = first { $_->{name} eq $name } @$chains;
     return $chain;
-}
-
-=method C<update_escalation_chain(HashRef $chain)>
-
-id and name are the minimum to update a chain, but everything else that is
-not sent in the update will be reset to defaults.
-
-=cut
-
-sub update_escalation_chain {
-    my ($self, $chain) = @_;
-
-    my $params = $chain;
-
-    foreach my $key (qw/destination ccdestination/) {
-        if ($params->{$key}) {
-            $params->{$key} = encode_json $params->{$key};
-        }
-    }
-
-    return $self->_send_data('updateEscalatingChain', $params);
 }
 
 =method C<get_accounts>
