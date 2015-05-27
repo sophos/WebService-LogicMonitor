@@ -17,6 +17,7 @@ use Log::Any qw/$log/;
 use URI::QueryParam;
 use URI;
 use WebService::LogicMonitor::EscalationChain;
+use WebService::LogicMonitor::Account;
 use Moo;
 
 =attr C<company>, C<username>, C<password>
@@ -165,7 +166,15 @@ L<http://help.logicmonitor.com/developers-guide/manage-user-accounts/#getAccount
 sub get_accounts {
     my $self = shift;
 
-    return $self->_get_data('getAccounts');
+    my $data = $self->_get_data('getAccounts');
+
+    my @accounts;
+    for (@$data) {
+        $_->{_lm} = $self;
+        push @accounts, WebService::LogicMonitor::Account->new($_);
+    }
+
+    return \@accounts;
 }
 
 =method C<get_account_by_email(Str $email)>
@@ -179,6 +188,8 @@ sub get_account_by_email {
     my ($self, $email) = @_;
 
     my $accounts = $self->get_accounts;
+
+    $log->debug("Searching for a user account with email address [$email]");
 
     my $account = first { $_->{email} =~ /$email/i } @$accounts;
 
