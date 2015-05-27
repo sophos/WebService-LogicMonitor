@@ -8,42 +8,6 @@ use Test::Deep;
 
 with 'LogicMonitorTests';
 
-#      {
-#     day       5,
-#     hour      17,
-#     minute    29,
-#     month     5,
-#     weekDay   4,
-#     year      3915
-# },
-
-has sdt_keys => (
-    is      => 'ro',
-    default => sub {
-        [
-            qw/
-              admin
-              category
-              comment
-              duration
-              endDateTime
-              endHour
-              endMinute
-              hostId
-              hour
-              id
-              isEffective
-              minute
-              monthDay
-              sdtType
-              startDateTime
-              type
-              weekDay
-              /
-        ];
-    },
-);
-
 test sdt => sub {
     my $self = shift;
 
@@ -97,18 +61,20 @@ test sdt => sub {
     isa_ok $sdts, 'ARRAY';
     is scalar @$sdts, $num_existing_sdts + 1,
       'Array has more one entry than it did before';
-    is_deeply [sort keys %$res], $self->sdt_keys;
-    is $res->{category}->{name}, 'HostSDT', 'Category is HostSDT';
-    is $res->{isEffective}, 1, 'SDT is currently in effect';
+
+    my $sdt = pop @$sdts;
+    isa_ok $sdt, 'WebService::LogicMonitor::SDT';
+    is $sdt->category->{name}, 'HostSDT', 'Category is HostSDT';
+    ok $sdt->is_effective, 'SDT is currently in effect';
 };
 
 test 'quick sdt' => sub {
     my $self = shift;
-    my $res;
+    my $sdt;
 
     is(
         exception {
-            $res = $self->lm->set_quick_sdt(
+            $sdt = $self->lm->set_quick_sdt(
                 Host => 'test1',
                 2,
                 type    => 1,
@@ -118,10 +84,10 @@ test 'quick sdt' => sub {
         undef,
         'Set quick SDT for host',
     );
-    is_deeply [sort keys %$res], $self->sdt_keys;
-    is $res->{category}->{name}, 'HostSDT', 'Category is HostSDT';
-    is $res->{isEffective}, 1, 'SDT is currently in effect';
 
+    isa_ok $sdt, 'WebService::LogicMonitor::SDT';
+    is $sdt->category->{name}, 'HostSDT', 'Category is HostSDT';
+    ok $sdt->is_effective, 'SDT is currently in effect';
 };
 
 run_me;

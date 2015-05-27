@@ -16,8 +16,9 @@ use List::MoreUtils 'zip';
 use Log::Any qw/$log/;
 use URI::QueryParam;
 use URI;
-use WebService::LogicMonitor::EscalationChain;
 use WebService::LogicMonitor::Account;
+use WebService::LogicMonitor::EscalationChain;
+use WebService::LogicMonitor::SDT;
 use Moo;
 
 =attr C<company>, C<username>, C<password>
@@ -626,7 +627,13 @@ sub get_sdts {
         $data = $self->_get_data('getSDTs');
     }
 
-    return $data;
+    my @sdts;
+    for (@$data) {
+        $_->{_lm} = $self;
+        push @sdts, WebService::LogicMonitor::SDT->new($_);
+    }
+
+    return \@sdts;
 }
 
 =method C<set_sdt(Str entity, Int|Str id, Int type, DateTime|Hashref start, DateTime|Hashref end, Str comment?)>
@@ -693,7 +700,9 @@ sub set_sdt {
           ($dt->year, ($dt->month - 1), $dt->day, $dt->hour, $dt->minute);
     }
 
-    return $self->_send_data($method, $params);
+    my $res = $self->_send_data($method, $params);
+    $res->{_lm} = $self;
+    return WebService::LogicMonitor::SDT->new($res);
 }
 
 =method C<set_quick_sdt(Str entity, Int|Str id, $hours, ...)>

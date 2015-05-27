@@ -3,7 +3,6 @@ package WebService::LogicMonitor::Account;
 # ABSTRACT: A LogicMonitor user account
 
 use v5.16.3;
-use JSON qw//;
 use WebService::LogicMonitor::Account::Role;
 use Moo;
 
