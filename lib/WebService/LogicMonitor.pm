@@ -29,7 +29,11 @@ L<http://help.logicmonitor.com/developers-guide/authenticating-requests/>
 
 =cut
 
-has [qw/password username company/] => (is => 'ro', required => 1);
+has [qw/password username company/] => (
+    is       => 'ro',
+    required => 1,
+    isa      => sub { die 'must be defined' unless defined $_[0] },
+);
 
 has [qw/_base_url _auth_hash _ua/] => (is => 'lazy');
 
