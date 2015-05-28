@@ -3,7 +3,6 @@ package WebService::LogicMonitor::SDT;
 # ABSTRACT: A LogicMonitor Scheduled DownTime object
 
 use v5.16.3;
-use JSON qw//;
 use Moo;
 
 with 'WebService::LogicMonitor::Object';

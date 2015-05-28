@@ -18,6 +18,7 @@ use URI::QueryParam;
 use URI;
 use WebService::LogicMonitor::Account;
 use WebService::LogicMonitor::EscalationChain;
+use WebService::LogicMonitor::Host;
 use WebService::LogicMonitor::SDT;
 use Moo;
 
@@ -318,7 +319,9 @@ sub get_host {
 
     croak "Missing displayname" unless $displayname;
 
-    return $self->_get_data('getHost', displayName => $displayname);
+    my $data = $self->_get_data('getHost', displayName => $displayname);
+    $data->{_lm} = $self;
+    return WebService::LogicMonitor::Host->new($data);
 }
 
 =method C<get_hosts(Int hostgroupid)>
@@ -340,9 +343,15 @@ sub get_hosts {
 
     my $data = $self->_get_data('getHosts', hostGroupId => $hostgroupid);
 
+    my @hosts;
+    for (@{$data->{hosts}}) {
+        $_->{_lm} = $self;
+        push @hosts, WebService::LogicMonitor::Host->new($_);
+    }
+
     return wantarray
-      ? ($data->{hosts}, $data->{hostgroup})
-      : $data->{hosts};
+      ? (\@hosts, $data->{hostgroup})
+      : \@hosts;
 }
 
 =method C<get_all_hosts>
@@ -354,88 +363,6 @@ probably take a while.
 
 sub get_all_hosts {
     return $_[0]->get_hosts(1);
-}
-
-=method C<update_host(Int host_id)>
-
-Update a host identified by C<$host_id>.
-
-L<http://help.logicmonitor.com/developers-guide/manage-hosts/#update>
-
-=cut
-
-# hostName
-# displayedAs
-# id
-# agentId
-
-# description
-# alertEnable
-# link
-# enableNetflow
-# netflowAgentId  string  Required if Netflow is enabled
-# opType  String  (Optional) add|replace|refresh (default)
-
-# hostGroupIds
-
-sub update_host {
-    my ($self, $host_id, %args) = @_;
-
-    croak "Missing host_id"     unless $host_id;
-    croak "Missing hostName"    unless $args{hostName};
-    croak "Missing displayedAs" unless $args{displayedAs};
-    croak "Missing agentId"     unless $args{agentId};
-
-    my @optional_params = qw/description alertEnable link enableNetflow/;
-    for my $param (@optional_params) {
-        if (!exists $args{$param}) {
-            $log->warning("Missing param [$param] may be reset to defaults");
-        }
-    }
-
-    # netflowAgentId
-
-    # first, get the required params
-    my $params = {id => $host_id,};
-
-    # then get properties because they need to be formatted
-    my $properties = delete $args{properties};
-
-    if ($properties) {
-        if (ref $properties ne 'HASH') {
-            croak 'properties should be specified as a hashref';
-        }
-
-        my $i = 0;
-        while (my ($k, $v) = each %$properties) {
-            $params->{"propName$i"}  = $k;
-            $params->{"propValue$i"} = $v;
-            $i++;
-        }
-    }
-
-    # convert fullPathInIds to hostGroupIds
-    # TODO allow user to set hostGroupIds
-    if ($args{fullPathInIds}) {
-        my @hostgroup_ids;
-        foreach my $full_path (@{$args{fullPathInIds}}) {
-            my $hg_id = $full_path->[-1];
-
-            # filter out any autogroups
-            my $hg = $self->get_host_group($hg_id);
-            next if $hg->{appliesTo};
-
-            push @hostgroup_ids, $hg_id;
-        }
-
-        $args{hostGroupIds} = join ',', @hostgroup_ids;
-        delete $args{fullPathInIds};
-    }
-
-    # get the rest of the args
-    $params = merge $params, \%args;
-
-    return $self->_send_data('updateHost', $params);
 }
 
 =method C<get_data_source_instances(Int host_id, Str data_source_name)>
