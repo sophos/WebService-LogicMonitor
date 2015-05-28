@@ -377,140 +377,48 @@ it must be an exact match with C<eq>.
 
 =cut
 
-sub get_host_groups {
-    my ($self, $key, $name) = @_;
+sub get_groups {
+    my ($self, $key, $value) = @_;
 
-    my $hosts = $self->_get_data('getHostGroups');
+    $log->debug('Fetching a list of groups');
 
-    if (!defined $name) {
-        return $hosts;
+    my $data = $self->_get_data('getHostGroups');
+
+    $log->debug('Number of hosts found: ' . scalar @$data);
+
+    return unless scalar @$data > 0;
+
+    require WebService::LogicMonitor::Group;
+
+    if (!defined $value) {
+        my @groups = map {
+            $_->{_lm} = $self;
+            WebService::LogicMonitor::Group->new($_);
+        } @$data;
+        return \@groups;
     }
 
-    $log->debug("Filtering hosts by name: [$name]");
-    $log->debug('Number of hosts found: ' . scalar @$hosts);
-    my @matching_hosts;
-
-    if (ref $name eq 'Regexp') {
+    my $filter_is_regexp;
+    $log->debug("Filtering hosts on [$key] with [$value]");
+    if (ref $value && ref $value eq 'Regexp') {
         $log->debug('Filter is a regexp');
-        @matching_hosts = grep { $_->{$key} =~ $name } @$hosts;
+        $filter_is_regexp = 1;
     } else {
         $log->debug('Filter is a string');
-        @matching_hosts = grep { $_->{$key} eq $name } @$hosts;
     }
 
-    $log->debug('Number of hosts after filter: ' . scalar @matching_hosts);
-
-    return @matching_hosts ? \@matching_hosts : undef;
-}
-
-=method C<get_host_group(Int hostgroupid, Bool inherited=0)>
-
-Returns an hashref of a host group.
-
-L<http://help.logicmonitor.com/developers-guide/manage-host-group/#details>
-
-While LoMo will return C<properties> as an arrayref of hashes like:
-
-  [ { name => 'something', value => 'blah'}, ]
-
-this method will convert to a hashref:
-
- { something => 'blah'}
-
-=cut
-
-sub get_host_group {
-    my ($self, $hostgroupid, $inherited) = @_;
-
-    croak "Missing hostgroupid" unless $hostgroupid;
-    $inherited = 0 unless defined $inherited;
-
-    my $data = $self->_get_data(
-        'getHostGroup',
-        hostGroupId       => $hostgroupid,
-        onlyOwnProperties => $inherited
-    );
-
-    my $props = delete $data->{properties};
-    foreach my $prop (@{$props}) {
-        $data->{properties}->{$prop->{name}} = $prop->{value};
-    }
-
-    return $data;
-}
-
-=method C<get_host_group_children(Int hostgroupid)>
-
-Gets the children host groups of C<$hostgroupid>.
-
-In scalar context, will return an arrayref of child groups.
-
-In array context, will return the same arrayref plus a hashref of the parent group.
-
-L<http://help.logicmonitor.com/developers-guide/manage-host-group/#children>
-
-=cut
-
-sub get_host_group_children {
-    my ($self, $hostgroupid) = @_;
-
-    croak "Missing hostgroupid" unless $hostgroupid;
-
-    my $data =
-      $self->_get_data('getHostGroupChildren', hostGroupId => $hostgroupid);
-
-    return wantarray
-      ? ($data->{items}, $data->{group})
-      : $data->{items};
-}
-
-=method C<update_host_group(Int hostgroupid)>
-
-Update host group C<$hostgroupid>.
-
-L<http://help.logicmonitor.com/developers-guide/manage-host-group/#update>
-
-According to LoMo docs, this should return the updated hostgroup in the
-same format as C<getHostGroup>, but there are different keys and properties is missing.
-
-Even if you are only wanting to add a property, anything not set will be reset.
-=cut
-
-sub update_host_group {
-    my ($self, $hostgroupid, %args) = @_;
-
-    # TODO improve this by passing a group hashref instead of $hostgroup id
-    # and copying over any relevant keys
-
-    # TODO make convenience wrapper different opType, e,g add_property_to_host_group
-    croak "Missing hostgroupid" unless $hostgroupid;
-    croak "Missing name" unless $args{name};
-
-    # first, get the required params
-    my $params = {
-        id   => $hostgroupid,
-        name => delete $args{name},
-    };
-
-    # then get properties because they need to be formatted
-    my $properties = delete $args{properties};
-
-    if ($properties) {
-        if (ref $properties ne 'HASH') {
-            croak 'properties should be specified as a hashref';
+    my @groups = map {
+        if ($filter_is_regexp ? $_->{$key} =~ $value : $_->{$key} eq $value) {
+            $_->{_lm} = $self;
+            WebService::LogicMonitor::Group->new($_);
+        } else {
+            ();
         }
+    } @$data;
 
-        my $i = 0;
-        while (my ($k, $v) = each %$properties) {
-            $params->{"propName$i"}  = $k;
-            $params->{"propValue$i"} = $v;
-            $i++;
-        }
-    }
+    $log->debug('Number of hosts after filter: ' . scalar @groups);
 
-    # get the rest of the args
-    $params = merge $params, \%args;
-    return $self->_send_data('updateHostGroup', $params);
+    return @groups ? \@groups : undef;
 }
 
 =method C<get_sdts(Str key?, Int id?)>
