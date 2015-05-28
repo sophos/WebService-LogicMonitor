@@ -16,10 +16,6 @@ use List::MoreUtils 'zip';
 use Log::Any qw/$log/;
 use URI::QueryParam;
 use URI;
-use WebService::LogicMonitor::Account;
-use WebService::LogicMonitor::EscalationChain;
-use WebService::LogicMonitor::Host;
-use WebService::LogicMonitor::SDT;
 use Moo;
 
 =attr C<company>, C<username>, C<password>
@@ -135,6 +131,8 @@ sub get_escalation_chains {
 
     my $data = $self->_get_data('getEscalationChains');
 
+    require WebService::LogicMonitor::EscalationChain;
+
     my @chains;
     foreach my $chain (@$data) {
         $chain->{_lm} = $self;
@@ -173,6 +171,8 @@ sub get_accounts {
     my $self = shift;
 
     my $data = $self->_get_data('getAccounts');
+
+    require WebService::LogicMonitor::Account;
 
     my @accounts;
     for (@$data) {
@@ -324,6 +324,8 @@ sub get_host {
     croak "Missing displayname" unless $displayname;
 
     my $data = $self->_get_data('getHost', displayName => $displayname);
+
+    require WebService::LogicMonitor::Host;
     $data->{_lm} = $self;
     return WebService::LogicMonitor::Host->new($data);
 }
@@ -346,6 +348,8 @@ sub get_hosts {
     croak "Missing hostgroupid" unless $hostgroupid;
 
     my $data = $self->_get_data('getHosts', hostGroupId => $hostgroupid);
+
+    require WebService::LogicMonitor::Host;
 
     my @hosts;
     for (@{$data->{hosts}}) {
@@ -445,6 +449,8 @@ sub get_sdts {
         $data = $self->_get_data('getSDTs');
     }
 
+    require WebService::LogicMonitor::SDT;
+
     my @sdts;
     for (@$data) {
         $_->{_lm} = $self;
@@ -519,6 +525,8 @@ sub set_sdt {
     }
 
     my $res = $self->_send_data($method, $params);
+
+    require WebService::LogicMonitor::SDT;
     $res->{_lm} = $self;
     return WebService::LogicMonitor::SDT->new($res);
 }
