@@ -82,29 +82,31 @@ test 'multiple hosts by group' => sub {
 test 'get data source instances' => sub {
     my $self = shift;
 
+    my $host = $self->lm->get_host('test1');
+
     like(
-        exception { $self->lm->get_data_source_instances; },
-        qr/Missing host_id/,
-        'Fails without a host_id',
+        exception { $host->get_datasource_instances(); },
+        qr/Missing datasource name/,
+        'Fails without a datasource name',
     );
 
     like(
-        exception { $self->lm->get_data_source_instances(12); },
-        qr/Missing data_source_name/,
-        'Fails without a data_source_name',
+        exception { $host->get_datasource_instances('ArgleBargle'); },
+        qr/^Failed to fetch data: \[600\]/,
+        'No such datasurce',
     );
 
     my $instances;
     is(
         exception {
-            $instances = $self->lm->get_data_source_instances(12, 'Ping');
+            $instances = $host->get_datasource_instances('Ping');
         },
         undef,
         'Retrieved instance list',
     );
 
     isa_ok $instances, 'ARRAY';
-    is_deeply [sort keys %{$instances->[0]}], $self->instance_keys;
+    isa_ok $instances->[0], 'WebService::LogicMonitor::DataSourceInstance';
 };
 
 test 'update a host' => sub {

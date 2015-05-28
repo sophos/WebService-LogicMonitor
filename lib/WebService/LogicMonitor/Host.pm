@@ -29,7 +29,8 @@ sub BUILDARGS {
     );
 
     for my $key (keys %transform) {
-        $args->{$transform{$key}} = delete $args->{$key} if $args->{$key};
+        $args->{$transform{$key}} = delete $args->{$key}
+          if exists $args->{$key};
     }
 
     for my $k (qw/description link/) {
@@ -84,9 +85,17 @@ has full_path_in_ids => (
     },
 );
 
-=method C<update_host(Int host_id)>
+=attr C<datasource_instances>
 
-Update a host identified by C<$host_id>.
+A cache of any datasource instances that are retrieved.
+
+=cut
+
+has datasource_instances => (is => 'ro', lazy => 1, default => sub {{}});
+
+=method C<update>
+
+Commit this host to LogicMonitor.
 
 L<http://help.logicmonitor.com/developers-guide/manage-hosts/#update>
 
@@ -172,10 +181,45 @@ sub update {
 
     $params->{hostGroupIds} = join ',', @hostgroup_ids;
 
-    use Data::Printer;
-    p $params;
+    # use Data::Printer;
+    # p $params;
 
     return $self->_lm->_send_data('updateHost', $params);
+}
+
+=method C<get_data_source_instances(Str datasource_name)>
+
+Return an array of instances of a datasource on this host. The array will also
+be cached in L</datasource_instances>.
+
+LogicMonitor's API does not list the datasources which actually apply to a host,
+or even which datasources are available on your account, so you must know in
+advance which datasource you want to retrieve.
+
+L<http://help.logicmonitor.com/developers-guide/manage-hosts/#instances>
+
+=cut
+
+sub get_datasource_instances {
+    my ($self, $ds_name) = @_;
+    require WebService::LogicMonitor::DataSourceInstance;
+    die 'Missing datasource name' unless $ds_name;
+
+    $log->debug("Fetching datasource instances for $ds_name");
+    my $data = $self->_lm->_get_data(
+        'getDataSourceInstances',
+        hostId     => $self->id,
+        dataSource => $ds_name,
+    );
+
+    my @ds_instances;
+    for (@$data) {
+        push @ds_instances,
+          WebService::LogicMonitor::DataSourceInstance->new($_);
+    }
+
+    $self->datasource_instances->{$ds_name} = \@ds_instances;
+    return \@ds_instances;
 }
 
 #     autoPropsAssignedOn     0,

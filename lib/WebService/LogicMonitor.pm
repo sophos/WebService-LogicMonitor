@@ -365,27 +365,6 @@ sub get_all_hosts {
     return $_[0]->get_hosts(1);
 }
 
-=method C<get_data_source_instances(Int host_id, Str data_source_name)>
-
-Return an array of data source instances on the host specified by C<$host_id>
-
-L<http://help.logicmonitor.com/developers-guide/manage-hosts/#instances>
-
-=cut
-
-sub get_data_source_instances {
-    my ($self, $host_id, $data_source_name) = @_;
-
-    croak 'Missing host_id'          unless $host_id;
-    croak 'Missing data_source_name' unless $data_source_name;
-
-    return $self->_get_data(
-        'getDataSourceInstances',
-        hostId     => $host_id,
-        dataSource => $data_source_name,
-    );
-}
-
 =method C<get_host_groups(Str|Regexp filter?)>
 
 Returns an arrayref of all host groups.
