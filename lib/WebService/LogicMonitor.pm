@@ -479,6 +479,13 @@ L<DateTime::Format::ISO8601>.
 
 L<http://help.logicmonitor.com/developers-guide/schedule-down-time/set-sdt-data/>
 
+  $lomo->set_sdt(
+      Host    => 'somehost',
+      start   => '20151101T1000',
+      end     => '20151101T1350',
+      comment => 'Important maintenance',
+  );
+
 =cut
 
 sub set_sdt {
@@ -547,7 +554,13 @@ sub set_sdt {
 
 =method C<set_quick_sdt(Str entity, Int|Str id, $hours, ...)>
 
-Wrapper around L</set_sdt> to quickly set SDT of a specified number of hours.
+Wrapper around L</set_sdt> to quickly set SDT starting immediately. The lenght
+of the SDT can be specfied as hours, minutes or any other unit supported by
+L<https://metacpan.org/pod/DateTime#Adding-a-Duration-to-a-Datetime>, but only
+one unit can be specified.
+
+  $lomo->set_quick_sdt(Host => 'somehost', minutes => 30, comment => 'Reboot to annoy support');
+  $lomo->set_quick_sdt(HostGroup => 456, hours => 6);
 
 =cut
 
@@ -555,15 +568,16 @@ sub set_quick_sdt {
     my $self   = shift;
     my $entity = shift;
     my $id     = shift;
-    my $hours  = shift;
+    my $units  = shift;
+    my $value  = shift;
 
     my $start_dt = DateTime->now(time_zone => 'UTC');
-    my $end_dt = $start_dt->clone->add(hours => $hours);
+    my $end_dt = $start_dt->clone->add($units => $value);
 
     return $self->set_sdt(
-        $entity, $id,
-        start => $start_dt,
-        end   => $end_dt,
+        $entity => $id,
+        start   => $start_dt,
+        end     => $end_dt,
         @_
     );
 }
