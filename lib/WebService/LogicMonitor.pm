@@ -460,7 +460,7 @@ sub get_sdts {
     return \@sdts;
 }
 
-=method C<set_sdt(Str entity, Int|Str id, Int type, DateTime|Hashref start, DateTime|Hashref end, Str comment?)>
+=method C<set_sdt(Str entity, Int|Str id, start => DateTime|Str, end => DateTime|Str, comment => Str?)>
 
 Sets SDT for an entity. Entity can be
 
@@ -474,7 +474,8 @@ Sets SDT for an entity. Entity can be
 The id for Host can be either an id number or hostname string.
 
 To simplify calling this we take two keys, C<start> and C<end> which must
-be DateTime objects.
+be either L<DateTime> objects or ISO8601 strings parseable by
+L<DateTime::Format::ISO8601>.
 
 L<http://help.logicmonitor.com/developers-guide/schedule-down-time/set-sdt-data/>
 
@@ -499,6 +500,8 @@ sub set_sdt {
         croak 'We only handle one-time SDTs right now';
     }
 
+    $args{type} = 1;
+
     my $params = {
         $id_key => $id,
         type    => $args{type},
@@ -509,20 +512,31 @@ sub set_sdt {
     croak 'Missing start time' unless $args{start};
     croak 'Missing end time'   unless $args{end};
 
+    require DateTime::Format::ISO8601;
+
+    my ($start_dt, $end_dt);
+    if (!ref $args{start}) {
+        $start_dt = DateTime::Format::ISO8601->parse_datetime($args{start});
+    } else {
+        $start_dt = $args{start};
+    }
+
+    if (!ref $args{end}) {
+        $end_dt = DateTime::Format::ISO8601->parse_datetime($args{end});
+    } else {
+        $end_dt = $args{end};
+    }
+
     # LoMo expects months to be 0..11
-    if (ref $args{start} eq 'DateTime') {
-        my $dt = $args{start};
+    @$params{(qw/year month day hour minute/)} = (
+        $start_dt->year, ($start_dt->month - 1),
+        $start_dt->day, $start_dt->hour, $start_dt->minute
+    );
 
-        @$params{(qw/year month day hour minute/)} =
-          ($dt->year, ($dt->month - 1), $dt->day, $dt->hour, $dt->minute);
-    }
-
-    if (ref $args{end} eq 'DateTime') {
-        my $dt = $args{end};
-
-        @$params{(qw/endYear endMonth endDay endHour endMinute/)} =
-          ($dt->year, ($dt->month - 1), $dt->day, $dt->hour, $dt->minute);
-    }
+    @$params{(qw/endYear endMonth endDay endHour endMinute/)} = (
+        $end_dt->year, ($end_dt->month - 1),
+        $end_dt->day, $end_dt->hour, $end_dt->minute
+    );
 
     my $res = $self->_send_data($method, $params);
 

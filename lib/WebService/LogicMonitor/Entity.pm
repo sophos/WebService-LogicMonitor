@@ -62,4 +62,19 @@ sub _build_properties {
     return \%prop;
 }
 
+sub set_sdt {
+    my $self = shift;
+
+    my $entity;
+    if (ref $self eq 'WebService::LogicMonitor::Host') {
+        $entity = 'Host';
+    } elsif (ref $self eq 'WebService::LogicMonitor::Group') {
+        $entity = 'HostGroup';
+    } else {
+        die 'What am I???';
+    }
+
+    return $self->_lm->set_sdt($entity => $self->id, @_);
+}
+
 1;
