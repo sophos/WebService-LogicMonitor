@@ -174,8 +174,8 @@ sub update {
         my $hg_id = $full_path->[-1];
 
         # filter out any autogroups
-        my $hg = $self->_lm->get_host_group($hg_id);
-        next if $hg->{appliesTo};
+        my $hg = $self->_lm->get_groups($hg_id);
+        next if $hg->[0]->{appliesTo};
         push @hostgroup_ids, $hg_id;
     }
 
