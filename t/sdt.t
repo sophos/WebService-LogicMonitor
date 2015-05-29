@@ -75,8 +75,8 @@ test 'quick sdt' => sub {
     is(
         exception {
             $sdt = $self->lm->set_quick_sdt(
-                Host => 'test1',
-                2,
+                Host    => 'test1',
+                minutes => 2,
                 type    => 1,
                 comment => ('Quick add 2 hour sdt ' . time),
               )
