@@ -6,6 +6,8 @@ use v5.16.3;
 use Log::Any '$log';
 use Moo;
 
+extends 'WebService::LogicMonitor::Entity';
+
 with 'WebService::LogicMonitor::Object';
 
 sub BUILDARGS {
@@ -19,44 +21,22 @@ sub BUILDARGS {
         numOfHosts  => 'num_hosts',
         inNSP       => 'in_nsp',
         inSDT       => 'in_sdt',
-
     );
 
-    for my $key (keys %transform) {
-        $args->{$transform{$key}} = delete $args->{$key}
-          if exists $args->{$key};
-    }
-
-    for my $k (qw/description/) {
-        if (exists $args->{$k} && !$args->{$k}) {
-            delete $args->{$k};
-        }
-    }
+    _transform_incoming_keys(\%transform, $args);
+    _clean_empty_keys(['description'], $args);
 
     return $args;
 }
 
-has id => (is => 'ro', predicate => 1);    # int
+has in_nsp => (is => 'rw');    # bool
 
-has name => (is => 'rw', required => 1);   # str
+has full_path => (is => 'rw'); # str
 
-has description => (is => 'rw');           # str
-
-has created_on => (
-    is     => 'ro',
-    coerce => sub {
-        DateTime->from_epoch(epoch => $_[0]);
-    },
-);
-
-has [qw/alert_enable in_nsp in_sdt/] => (is => 'rw');    # bool
-
-has full_path => (is => 'rw');                           # str
-
-has parent_id => (is => 'rw');                           # int
+has parent_id => (is => 'rw'); # int
 
 # num_hosts is only there if getHostGroupChildren was called
-has num_hosts => (is => 'ro');                           # int
+has num_hosts => (is => 'ro');    # int
 
 =attr C<children>
 
@@ -85,30 +65,10 @@ this method will convert to a hashref:
 
 =cut
 
-has [qw/properties own_properties/] => (is => 'lazy');
+has own_properties => (is => 'lazy');
 
 sub _build_own_properties {
     return $_[0]->_build_properties(1);
-}
-
-sub _build_properties {
-    my ($self, $only_own) = @_;
-
-    $only_own //= 0;
-
-    $log->debug('Fetching group properties');
-
-    my $data = $self->_lm->_get_data(
-        'getHostGroup',
-        hostGroupId       => $self->id,
-        onlyOwnProperties => $only_own,
-    );
-
-    # TODO weed out empty strings,
-    # TODO convert comma separated strings to arrays
-    my %prop = map { $_->{name} => $_->{value} } @{$data->{properties}};
-
-    return \%prop;
 }
 
 sub _build_children {

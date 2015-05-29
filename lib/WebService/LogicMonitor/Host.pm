@@ -7,6 +7,8 @@ use DateTime;
 use Log::Any '$log';
 use Moo;
 
+extends 'WebService::LogicMonitor::Entity';
+
 with 'WebService::LogicMonitor::Object';
 
 sub BUILDARGS {
@@ -17,10 +19,14 @@ sub BUILDARGS {
         agentId               => 'agent_id',
         alertEnable           => 'alert_enable',
         effectiveAlertEnabled => 'effective_alert_enabled',
+        deviceType            => 'device_type',
         hostName              => 'host_name',
         inSDT                 => 'in_sdt',
         isActive              => 'is_active',
         enableNetflow         => 'enable_netflow',
+        netflowAgentId        => 'netflow_agent_id',
+        relatedDeviceId       => 'related_device_id',
+        scanConfigId          => 'scan_config_id',
         displayedAs           => 'displayed_as',
         updatedOn             => 'updated_on',
         createdOn             => 'created_on',
@@ -28,51 +34,33 @@ sub BUILDARGS {
         autoPropsAssignedOn   => 'auto_props_assigned_on',
     );
 
-    for my $key (keys %transform) {
-        $args->{$transform{$key}} = delete $args->{$key}
-          if exists $args->{$key};
-    }
-
-    for my $k (qw/description link/) {
-        if (exists $args->{$k} && !$args->{$k}) {
-            delete $args->{$k};
-        }
-    }
+    _transform_incoming_keys(\%transform, $args);
+    _clean_empty_keys([qw/description link/], $args);
 
     return $args;
 }
 
-has id => (is => 'ro', predicate => 1);    # int
-
 # host_name is the ip_address/DNS name
-has [qw/host_name displayed_as/] => (is => 'rw', required => 1);    # str
-has [qw/agent_description description name/] => (is => 'rw', predicate => 1)
-  ;                                                                 # str
+has [qw/host_name displayed_as/] => (is => 'rw', required  => 1);    # str
+has [qw/agent_description/]      => (is => 'rw', predicate => 1);    # str
 
-has agent_id => (is => 'rw', required => 1);                        # int
+has device_type => (is => 'ro');                                     # str
+has agent_id => (is => 'rw', required => 1);                         # int
 
-has link => (is => 'rw', predicate => 1);                           # str - url
+has link => (is => 'rw', predicate => 1);    # str - url
 
-has status => (is => 'ro');    # enum dead|
-has type   => (is => 'ro');    # enum HOST|
+has status => (is => 'ro');                  # enum dead|
 
-has [qw/alert_enable enable_netflow/] => (is => 'rw', predicate => 1);   # bool
+has [qw/lastdatatime lastrawdatatime/] => (is => 'ro');
+has enable_netflow => (is => 'rw', predicate => 1);    # bool
+has [qw/netflow_agent_id related_device_id scan_config_id/] => (is => 'ro')
+  ;                                                    # int
+has [qw/effective_alert_enabled is_active /] => (is => 'ro');    # bool
 
-has [qw/effective_alert_enabled in_sdt is_active /] => (is => 'ro');     # bool
-
-has [qw/updated_on created_on auto_props_assigned_on/] => (
+has [qw/updated_on auto_props_assigned_on/] => (
     is     => 'ro',
     coerce => sub {
         DateTime->from_epoch(epoch => $_[0]);
-    },
-);
-
-has properties => (
-    is  => 'rw',
-    isa => sub {
-        unless (ref $_[0] && ref $_[0] eq 'HASH') {
-            die 'properties should be specified as a hashref';
-        }
     },
 );
 
@@ -101,20 +89,6 @@ L<http://help.logicmonitor.com/developers-guide/manage-hosts/#update>
 
 =cut
 
-# hostName
-# displayedAs
-# id
-# agentId
-
-# description
-# alertEnable
-# link
-# enableNetflow
-# netflowAgentId  string  Required if Netflow is enabled
-# opType  String  (Optional) add|replace|refresh (default)
-
-# hostGroupIds
-
 sub update {
     my $self = shift;
 
@@ -125,32 +99,14 @@ sub update {
 
     # first, get the required params
     my $params = {
-        id          => $self->id,
-        opType      => 'refresh',
-        hostName    => $self->host_name,
-        displayedAs => $self->displayed_as,
-        agentId     => $self->agent_id,
+        id            => $self->id,
+        opType        => 'refresh',
+        hostName      => $self->host_name,
+        displayedAs   => $self->displayed_as,
+        agentId       => $self->agent_id,
+        alertEnable   => $self->alert_enable,
+        enableNetflow => $self->enable_netflow,
     };
-
-    my @optional_params = qw/description alert_enable link enable_netflow/;
-    for my $param (@optional_params) {
-        my $meth = "has_$param";
-        if (!$self->$meth) {
-            $log->warning("Missing param [$param] may be reset to defaults");
-        } else {
-            $params->{$param} = $self->$param;
-        }
-
-    }
-
-    my %transform = (
-        alert_enable   => 'alertEnable',
-        enable_netflow => 'enableNetflow',
-    );
-
-    for my $k (keys %transform) {
-        $params->{$transform{$k}} = delete $params->{$k} if $params->{$k};
-    }
 
     # then get properties because they need to be formatted
     my $properties = $self->properties;
