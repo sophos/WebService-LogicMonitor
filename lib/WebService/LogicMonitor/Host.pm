@@ -137,10 +137,8 @@ sub update {
 
     $params->{hostGroupIds} = join ',', @hostgroup_ids;
 
-    # use Data::Printer;
-    # p $params;
-
-    return $self->_lm->_send_data('updateHost', $params);
+    $self->_lm->_send_data('updateHost', $params);
+    return;
 }
 
 =method C<get_data_source_instances(Str datasource_name)>

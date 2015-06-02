@@ -396,6 +396,10 @@ sub get_groups {
 
     return unless scalar @$data > 0;
 
+    if (defined $key && !defined $value) {
+        die "Cannot search on $key without a value";
+    }
+
     require WebService::LogicMonitor::Group;
 
     if (!defined $value) {
