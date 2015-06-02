@@ -1,13 +1,22 @@
 #!/usr/bin/env perl
 
-use v5.18;
-use strictures;
+use v5.16.3;
+use warnings;
+use utf8;
+use Getopt::Long qw/:config no_ignore_case bundling/;
 use WebService::LogicMonitor;
 use Try::Tiny;
-
 use Data::Printer;
 
-if ($ENV{LOGICMONITOR_DEBUG}) {
+my $opt = {};
+
+GetOptions $opt, 'debug|d!', 'datasource|D=s', 'group|g=s'
+  or die "Commandline error\n";
+
+die "You must specify a datasource name to look for\n"
+  unless $opt->{datasource};
+
+if ($ENV{LOGICMONITOR_DEBUG} || $opt->{debug}) {
     require Log::Any::Adapter;
     Log::Any::Adapter->set('Stderr');
 }
@@ -18,66 +27,52 @@ my $lm = WebService::LogicMonitor->new(
     company  => $ENV{LOGICMONITOR_COMPANY},
 );
 
-# TODO add an exclusion list - hosts we expect datasource to be missing from
-my $datasource   = 'NTP';
-my $host_groups  = $lm->get_host_groups('CA');
-my $top_level_hg = shift @$host_groups;
+my $host_groups;
+if ($opt->{group}) {
+    $host_groups = $lm->get_groups(fullPath => $opt->{group});
+} else {
+    $host_groups = $lm->get_groups;
+}
 
-p $top_level_hg;
-
-$host_groups = $lm->get_host_group_children($top_level_hg->{id});
+my $top = shift @$host_groups;
 
 my %groups_to_enable;
 my @hosts_missing_datasource;
-foreach my $hg (@$host_groups) {
-    p $hg;
-    say "Checking group: $hg->{name}";
-    my $hosts = $lm->get_hosts($hg->{id});
 
-    # p $hosts;
-    foreach my $host (@$hosts) {
-        say '-' x 25;
-        say "Checking host: $host->{hostName}";
-        my $instances;
-        try {
-            $instances =
-              $lm->get_data_source_instances($host->{id}, $datasource);
+sub recurse_tree {
+    my $children = shift;
+    foreach my $e (@$children) {
+
+        # check if child is a host or a group
+
+        if (ref $e eq 'WebService::LogicMonitor::Group') {
+            recurse_tree($e->children);
+            next;
+        }
+
+        say 'Checking host: ' . $e->name;
+        my $instances = try {
+            $e->get_datasource_instances($opt->{datasource});
         }
         catch {
             say $_;
-            push @hosts_missing_datasource, $host->{hostName};
+            push @hosts_missing_datasource, $e->name;
+            return;
         };
 
         next unless $instances;
 
-        # p $instances;
-
-        # NTP has only one instance
-        my $instance = shift @$instances;
-
-        print 'datasource status: ';
-        if ($instance->{enabled}) {
-            say 'enabled';
-        } else {
-            say 'disabled';
-        }
-
-        print 'alert status: ';
-        if ($instance->{alertEnable}) {
-            say 'enabled';
-        } else {
-            say 'disabled';
-        }
-
-        print 'group disabled: ';
-        if ($instance->{disabledAtGroup}) {
-            say 'yes - ' . $instance->{disabledAtGroup};
-            $groups_to_enable{$instance->{disabledAtGroup}} = 1;
-        } else {
-            say 'no';
+        for my $i (@$instances) {
+            say "\tdatasource enabled: " . ($i->enabled      ? '✓' : '✗');
+            say "\t    alerts enabled: " . ($i->alert_enable ? '✓' : '✗');
+            say "\t    group disabled: "
+              . ($i->disabled_at_group ? '✓' : '✗');
         }
     }
+    return;
 }
+
+recurse_tree($top->children);
 
 p %groups_to_enable;
 p @hosts_missing_datasource;
