@@ -166,6 +166,8 @@ sub get_datasource_instances {
         dataSource => $ds_name,
     );
 
+    die 'Found datasource but no items were returned' unless scalar @$data;
+
     my @ds_instances;
     for (@$data) {
         push @ds_instances,
