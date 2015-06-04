@@ -180,6 +180,14 @@ sub get_datasource_instances {
     return \@ds_instances;
 }
 
+sub get_alerts {
+    my $self = shift;
+    return $self->_lm->get_alerts(
+        host_id => $self->id,
+        @_,
+    );
+}
+
 #     autoPropsAssignedOn     0,
 #     autoPropsUpdatedOn      1432687969,
 #     deviceType              0,
