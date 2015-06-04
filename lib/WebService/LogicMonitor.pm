@@ -267,6 +267,7 @@ sub get_alerts {
     my %transform = (
         ack_filter => 'ackFilter',
         filter_sdt => 'filterSDT',
+        host_id    => 'hostId',
     );
 
     for my $key (keys %transform) {
@@ -278,7 +279,26 @@ sub get_alerts {
 
     return if $data->{total} == 0;
 
+    require WebService::LogicMonitor::Group;
     require WebService::LogicMonitor::Alert;
+
+    # convert host group hash to objects
+    # do it here so we can make sure we only each create group once
+    my %group_cache;
+    for my $alert (@{$data->{alerts}}) {
+        my @groups;
+        for (@{$alert->{hostGroups}}) {
+            if ($group_cache{$_->{id}}) {
+                push @groups, $group_cache{$_->{id}};
+            } else {
+                $_->{_lm} = $self;
+                my $g = WebService::LogicMonitor::Group->new($_);
+                $group_cache{$_->{id}} = $g;
+                push @groups, $g;
+            }
+        }
+        $alert->{hostGroups} = \@groups;
+    }
 
     my @alerts = map {
         $_->{_lm} = $self;

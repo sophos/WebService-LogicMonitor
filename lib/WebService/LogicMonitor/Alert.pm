@@ -37,14 +37,6 @@ sub BUILDARGS {
         $args
     );
 
-    # convert host group hash to objects
-    # can't use coerce because it doesn't have access to $self
-    my @groups = map {
-        $_->{_lm} = $args->{_lm};
-        WebService::LogicMonitor::Group->new($_);
-    } @{$args->{groups}};
-    $args->{groups} = \@groups;
-
     return $args;
 }
 
