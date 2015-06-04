@@ -163,7 +163,7 @@ test 'get only one datapoint' => sub {
 
     my $dsi_values = $data->values->{$self->{datasource}};
     my $rand_value =
-      $dsi_values->{[keys %$dsi_values]->[int rand keys $dsi_values]};
+      $dsi_values->{[keys %$dsi_values]->[int rand keys %$dsi_values]};
     is keys %$rand_value, 1, 'Got one keys...';
     ok exists $rand_value->{$self->datapoint}, '... one matches';
 };
