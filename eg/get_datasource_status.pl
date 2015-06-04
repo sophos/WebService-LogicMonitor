@@ -8,6 +8,8 @@ use WebService::LogicMonitor;
 use Try::Tiny;
 use Data::Printer;
 
+binmode STDOUT, ':utf8';
+
 my $opt = {};
 
 GetOptions $opt, 'debug|d!', 'datasource|D=s', 'group|g=s'
@@ -27,18 +29,6 @@ my $lm = WebService::LogicMonitor->new(
     company  => $ENV{LOGICMONITOR_COMPANY},
 );
 
-my $host_groups;
-if ($opt->{group}) {
-    $host_groups = $lm->get_groups(fullPath => $opt->{group});
-} else {
-    $host_groups = $lm->get_groups;
-}
-
-my $top = shift @$host_groups;
-
-my %groups_to_enable;
-my @hosts_missing_datasource;
-
 sub recurse_tree {
     my $children = shift;
     foreach my $e (@$children) {
@@ -55,8 +45,7 @@ sub recurse_tree {
             $e->get_datasource_instances($opt->{datasource});
         }
         catch {
-            say $_;
-            push @hosts_missing_datasource, $e->name;
+            say "\tdatasource not applied to this host";
             return;
         };
 
@@ -65,14 +54,22 @@ sub recurse_tree {
         for my $i (@$instances) {
             say "\tdatasource enabled: " . ($i->enabled      ? '✓' : '✗');
             say "\t    alerts enabled: " . ($i->alert_enable ? '✓' : '✗');
-            say "\t    group disabled: "
-              . ($i->disabled_at_group ? '✓' : '✗');
         }
+        use Data::Printer;
+        p $instances;
     }
     return;
 }
 
-recurse_tree($top->children);
+my $host_groups;
+if ($opt->{group}) {
+    $host_groups = $lm->get_groups(fullPath => $opt->{group});
+} else {
+    $host_groups = $lm->get_groups;
+}
 
-p %groups_to_enable;
-p @hosts_missing_datasource;
+die "No such group" unless $host_groups;
+
+my $top = shift @$host_groups;
+
+recurse_tree($top->children);
