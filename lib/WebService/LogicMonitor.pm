@@ -262,13 +262,31 @@ what parameters are available to filter the alerts.
 =cut
 
 sub get_alerts {
-    my $self = shift;
+    my ($self, %args) = @_;
 
-    my $data = $self->_get_data('getAlerts', @_);
+    my %transform = (
+        ack_filter => 'ackFilter',
+        filter_sdt => 'filterSDT',
+    );
 
-    return $data->{total} == 0
-      ? undef
-      : $data->{alerts};
+    for my $key (keys %transform) {
+        $args{$transform{$key}} = delete $args{$key}
+          if exists $args{$key};
+    }
+
+    my $data = $self->_get_data('getAlerts', %args);
+
+    return if $data->{total} == 0;
+
+    require WebService::LogicMonitor::Alert;
+
+    my @alerts = map {
+        $_->{_lm} = $self;
+        WebService::LogicMonitor::Alert->new($_);
+    } @{$data->{alerts}};
+
+    return \@alerts;
+
 }
 
 =method C<get_host(Str displayname)>
@@ -600,6 +618,5 @@ __END__
 
           say "\t\tdatasource status: " . ($instance->{enabled} ? 'enabled' : 'disabled');
           say "\t\talert status: " . ($instance->{alertEnable} ? 'enabled' : 'disabled');
-          say "\t\tgroup disabled: " . ($instance->{disabledAtGroup} ? "yes: $instance->{disabledAtGroup}" : 'no');
       }
   }
