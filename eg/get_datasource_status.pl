@@ -6,7 +6,6 @@ use utf8;
 use Getopt::Long qw/:config no_ignore_case bundling/;
 use WebService::LogicMonitor;
 use Try::Tiny;
-use Data::Printer;
 
 binmode STDOUT, ':utf8';
 
@@ -54,9 +53,12 @@ sub recurse_tree {
         for my $i (@$instances) {
             say "\tdatasource enabled: " . ($i->enabled      ? '✓' : '✗');
             say "\t    alerts enabled: " . ($i->alert_enable ? '✓' : '✗');
+            if ($i->enabled) {
+
+                # get data for this datasource instance
+                # my $data = $i->get_data(period => '1hr');
+            }
         }
-        use Data::Printer;
-        p $instances;
     }
     return;
 }

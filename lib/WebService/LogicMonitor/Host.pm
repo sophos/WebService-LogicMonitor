@@ -130,7 +130,7 @@ sub update {
         my $hg_id = $full_path->[-1];
 
         # filter out any autogroups
-        my $hg = $self->_lm->get_groups($hg_id);
+        my $hg = $self->_lm->get_groups(id => $hg_id);
         next if $hg->[0]->{appliesTo};
         push @hostgroup_ids, $hg_id;
     }
@@ -170,6 +170,8 @@ sub get_datasource_instances {
 
     my @ds_instances;
     for (@$data) {
+        $_->{_lm}       = $self->_lm;
+        $_->{host_name} = $self->name;
         push @ds_instances,
           WebService::LogicMonitor::DataSourceInstance->new($_);
     }

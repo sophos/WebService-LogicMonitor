@@ -216,79 +216,40 @@ sub get_account_by_email {
   overviewGraph   string  The name of the Overview Graph to get data from
 =cut
 
+# TODO why does this work with only host display name and not id?
 sub get_data {
     my ($self, %args) = @_;
 
+    # required params
     croak "'host' is required" unless $args{host};
-    croak "'dsi' is required"  unless $args{dsi};
+    my %params = (host => $args{host},);
 
-    my $uri = $self->_get_uri('getData');
+    if ($args{datasource_instance}) {
+        $params{dataSourceInstance} = $args{datasource_instance};
+    } elsif ($args{datasource}) {
+        $params{dataSource} = $args{datasource};
+    } else {
+        croak "Either 'datasource' or 'datasource_instance' must be specified";
+    }
 
-    # required
-    $uri->query_param_append('host',               $args{host});
-    $uri->query_param_append('dataSourceInstance', $args{dsi});
-
-    # optional
-    $uri->query_param_append('start', $args{start}) if $args{start};
-    $uri->query_param_append('end',   $args{end})   if $args{end};
-    $uri->query_param_append('aggregate', $args{aggregate})
-      if $args{aggregate};
-
-    # XXX period seems to do nothing if start and end are specified
-    $uri->query_param_append('period', $args{period}) if $args{period};
+    # optional params
+    for (qw/start end aggregate period/) {
+        $params{$_} = $args{$_} if $args{$_};
+    }
 
     if ($args{datapoint}) {
         croak "'datapoint' must be an arrayref"
           unless ref $args{datapoint} eq 'ARRAY';
 
         for my $i (0 .. scalar @{$args{datapoint}} - 1) {
-            $uri->query_param_append("dataPoint$i", $args{datapoint}->[$i]);
+            $params{"dataPoint$i"} = $args{datapoint}->[$i];
         }
     }
 
-    $log->debug("Fetching uri: $uri");
-    my $res = $self->_ua->get($uri);
-    croak "Failed!\n" unless $res->is_success;
+    my $data = $self->_get_data('getData', %params);
 
-    my $res_decoded = decode_json $res->decoded_content;
-
-    if ($res_decoded->{status} != 200) {
-        croak(
-            sprintf 'Failed to fetch data: [%s] %s',
-            $res_decoded->{status},
-            $res_decoded->{errmsg});
-    }
-
-    my $datapoints = $res_decoded->{data}->{dataPoints};
-
-    $log->debug('Got '
-          . scalar @{$res_decoded->{data}->{values}->{$args{dsi}}}
-          . ' values');
-    my $tzoffset = $res_decoded->{data}->{tzoffset};    # don't need this...?
-
-    my $data = [];
-    foreach my $dsi_values (@{$res_decoded->{data}->{values}->{$args{dsi}}}) {
-
-        # the dsi_values array provides the values for the datapoints but the first
-        # two entries are time info
-        my $epoch      = shift @$dsi_values;
-        my $timestring = shift @$dsi_values;
-
-        #require DateTime;
-        #my $dt = DateTime->from_epoch(epoch => $epoch);
-
-        if (scalar @$datapoints != scalar @$dsi_values) {
-
-            # TODO just ignore this point and carry on?
-            croak 'Number of datapoints doesn\'t match number of values';
-        }
-
-        my %values = zip @$datapoints, @$dsi_values;
-        push @$data,
-          {epoch => $epoch, timestr => $timestring, values => \%values};
-    }
-
-    return $data;
+    require WebService::LogicMonitor::DataSourceData;
+    return WebService::LogicMonitor::DataSourceData->new($data);
 }
 
 =method C<get_alerts(...)>
@@ -420,6 +381,7 @@ sub get_groups {
     }
 
     my @groups = map {
+        die "This key is not valid: $key" unless $_->{$key};
         if ($filter_is_regexp ? $_->{$key} =~ $value : $_->{$key} eq $value) {
             $_->{_lm} = $self;
             WebService::LogicMonitor::Group->new($_);
