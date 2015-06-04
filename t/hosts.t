@@ -1,23 +1,9 @@
-use v5.10.1;
-use Test::Roo;
 use lib 't/lib';
-
 use Test::Fatal;
 use Test::Deep;
+use Test::Roo;
 
 with 'LogicMonitorTests';
-
-has expected_keys => (
-    is      => 'ro',
-    default => sub {
-        [
-            qw/agentDescription agentId alertEnable autoPropsAssignedOn autoPropsUpdatedOn
-              createdOn description deviceType displayedAs effectiveAlertEnabled enableNetflow
-              fullPathInIds hostName id inSDT isActive lastdatatime lastrawdatatime link name
-              netflowAgentId properties relatedDeviceId scanConfigId status type updatedOn/
-        ];
-    },
-);
 
 has instance_keys => (
     is      => 'ro',
@@ -44,8 +30,10 @@ test 'one host' => sub {
         undef, 'Retrieved host',
     );
 
-    isa_ok $host, 'HASH';
-    is_deeply [sort keys %$host], $self->expected_keys;
+    isa_ok $host, 'WebService::LogicMonitor::Host';
+    is $host->name,           'mx-spam1', 'Name matches';
+    is $host->type,           'HOST',     'Type is HOST';
+    isa_ok $host->created_on, 'DateTime', 'created_on is a datetime object';
 
 };
 
@@ -65,6 +53,7 @@ test 'multiple hosts by group' => sub {
     );
 
     isa_ok $hosts, 'ARRAY';
+    isa_ok $hosts->[0], 'WebService::LogicMonitor::Host';
 
     my $hostgroup;
     is(
@@ -72,7 +61,8 @@ test 'multiple hosts by group' => sub {
         undef, 'Retrieved host list',
     );
 
-    isa_ok $hosts,     'ARRAY';
+    isa_ok $hosts, 'ARRAY';
+    isa_ok $hosts->[0], 'WebService::LogicMonitor::Host';
     isa_ok $hostgroup, 'HASH';
 };
 
@@ -92,29 +82,31 @@ test 'multiple hosts by group' => sub {
 test 'get data source instances' => sub {
     my $self = shift;
 
+    my $host = $self->lm->get_host('test1');
+
     like(
-        exception { $self->lm->get_data_source_instances; },
-        qr/Missing host_id/,
-        'Fails without a host_id',
+        exception { $host->get_datasource_instances(); },
+        qr/Missing datasource name/,
+        'Fails without a datasource name',
     );
 
     like(
-        exception { $self->lm->get_data_source_instances(12); },
-        qr/Missing data_source_name/,
-        'Fails without a data_source_name',
+        exception { $host->get_datasource_instances('ArgleBargle'); },
+        qr/^Failed to fetch data: \[600\]/,
+        'No such datasurce',
     );
 
     my $instances;
     is(
         exception {
-            $instances = $self->lm->get_data_source_instances(12, 'Ping');
+            $instances = $host->get_datasource_instances('Ping');
         },
         undef,
         'Retrieved instance list',
     );
 
     isa_ok $instances, 'ARRAY';
-    is_deeply [sort keys %{$instances->[0]}], $self->instance_keys;
+    isa_ok $instances->[0], 'WebService::LogicMonitor::DataSourceInstance';
 };
 
 test 'update a host' => sub {
@@ -126,40 +118,30 @@ test 'update a host' => sub {
         undef, 'Retrieved host',
     );
 
-    like(
-        exception { $self->lm->update_host; },
-        qr/Missing host_id/,
-        'Fails without a host_id',
-    );
+    # like(
+    #     exception { $->update_host; },
+    #     qr/Missing host_id/,
+    #     'Fails without a host_id',
+    # );
 
-    my $host2;
-    is(
-        exception {
-            $host2 = $self->lm->update_host(
-                $host->{id},
-                opType        => 'replace',
-                hostName      => $host->{hostName},
-                displayedAs   => $host->{displayedAs},
-                agentId       => $host->{agentId},
-                fullPathInIds => $host->{fullPathInIds},
+    $host->properties->{'system.categories'} = 'channelserver';
+    is(exception { $host->update }, undef, 'Updated hosts',);
 
-                #properties => { 'system.virtualization' => 'LXC' },
-                properties => {'system.categories' => 'channelserver'},
-            );
-        },
-        undef,
-        'Updated hosts',
-    );
-    $host->{autoPropsAssignedOn} = time;
+    #$host->{autoPropsAssignedOn} = time;
 
-    is(
-        exception { $host2 = $self->lm->get_host('test1'); },
-        undef, 'Retrieved host',
-    );
+    # is(
+    #     exception { $host2 = $self->lm->get_host('test1'); },
+    #     undef, 'Retrieved host',
+    # );
 
-    delete $host->{autoPropsUpdatedOn};
-    delete $host2->{autoPropsUpdatedOn};
-    cmp_deeply $host, $host2, 'Old host and new host match';
+    #delete $host->{autoPropsUpdatedOn};
+    #delete $host2->{autoPropsUpdatedOn};
+
+    # use Data::Printer;
+    # p $host;
+    # p $host2;
+
+    # cmp_deeply $host, $host2, 'Old host and new host match';
 };
 
 run_me;
