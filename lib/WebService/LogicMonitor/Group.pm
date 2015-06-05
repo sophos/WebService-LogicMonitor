@@ -21,10 +21,11 @@ sub BUILDARGS {
         numOfHosts  => 'num_hosts',
         inNSP       => 'in_nsp',
         inSDT       => 'in_sdt',
+        appliesTo   => 'applies_to',
     );
 
     _transform_incoming_keys(\%transform, $args);
-    _clean_empty_keys(['description'], $args);
+    _clean_empty_keys([qw/description applies_to/], $args);
 
     return $args;
 }
@@ -35,8 +36,10 @@ has full_path => (is => 'rw'); # str
 
 has parent_id => (is => 'rw'); # int
 
+has applies_to => (is => 'ro');    # str
+
 # num_hosts is only there if getHostGroupChildren was called
-has num_hosts => (is => 'ro');    # int
+has num_hosts => (is => 'ro');     # int
 
 =attr C<children>
 

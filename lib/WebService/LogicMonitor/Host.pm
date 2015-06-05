@@ -4,6 +4,7 @@ package WebService::LogicMonitor::Host;
 
 use v5.16.3;
 use DateTime;
+use List::Util 1.33 'any';
 use Log::Any '$log';
 use Moo;
 
@@ -64,14 +65,40 @@ has [qw/updated_on auto_props_assigned_on/] => (
     },
 );
 
-has full_path_in_ids => (
-    is  => 'rw',
-    isa => sub {
+=attr C<groups>
+
+Array of L<WebService::LogicMonitor::Group> groups which this host is a
+member of.
+
+Whilst you can modify the array directly, you should use the L</add_to_group>
+and </remove_from_group> methods instead.
+
+=cut
+
+has groups => (is => 'rwp', lazy => 1, builder => 1);
+
+has _full_path_in_ids => (
+    is       => 'ro',
+    init_arg => 'full_path_in_ids',
+    isa      => sub {
         unless (ref $_[0] && ref $_[0] eq 'ARRAY') {
             die 'full_path_in_ids should be specified as a arrayref';
         }
     },
 );
+
+sub _build_groups {
+    my $self = shift;
+
+    my @groups;
+
+    foreach my $full_path (@{$self->_full_path_in_ids}) {
+        my $hg_id = $full_path->[-1];
+        my $hg = $self->_lm->get_groups(id => $hg_id);
+        push @groups, $hg->[0];
+    }
+    return \@groups;
+}
 
 =attr C<datasource_instances>
 
@@ -115,16 +142,11 @@ sub update {
     # TODO allow user to set hostGroupIds
 
     my @hostgroup_ids;
-
-    # TODO pinch from properties.system.groups?
-    foreach my $full_path (@{$self->full_path_in_ids}) {
-        my $hg_id = $full_path->[-1];
+    foreach my $g (@{$self->groups}) {
 
         # filter out any autogroups
-        # TODO cache groups
-        my $hg = $self->_lm->get_groups(id => $hg_id);
-        next if $hg->[0]->{appliesTo};
-        push @hostgroup_ids, $hg_id;
+        next if $g->applies_to;
+        push @hostgroup_ids, $g->id;
     }
 
     $params->{hostGroupIds} = join ',', @hostgroup_ids;
@@ -180,47 +202,47 @@ sub get_alerts {
     );
 }
 
-#     autoPropsAssignedOn     0,
-#     autoPropsUpdatedOn      1432687969,
-#     deviceType              0,
-#     enableNetflow           JSON::PP::Boolean  {
-#         public methods (0)
-#         private methods (1) : __ANON__
-#         internals: 0
-#     },
-#     fullPathInIds           [
-#         [0] [
-#             [0] 12
-#         ]
-#     ],
-#     lastdatatime            0,
-#     lastrawdatatime         0,
-#     link                    "",
-#     netflowAgentId          0,
-#     properties              {
-#         esx.pass                "********",
-#         esx.user                "root",
-#         jdbc.mysql.pass         "********",
-#         jdbc.mysql.user         "logicmonitor",
-#         snmp.community          "********",
-#         snmp.version            "v2c",
-#         system.categories       "snmp,snmpTCPUDP,Netsnmp,snmpHR",
-#         system.db.db2           "",
-#         system.db.mssql         "",
-#         system.db.mysql         "",
-#         system.db.oracle        "",
-#         system.description      "",
-#         system.devicetype       0,
-#         system.displayname      "mx-spam1",
-#         system.enablenetflow    "false",
-#         system.groups           "Vancouver",
-#         system.hostname         "mx-spam1",
-#         system.ips              "10.99.159.111",
-#         system.sysinfo          "Linux mx-spam1 3.10.17-gentoo #1 SMP Tue Nov 5 00:19:02 UTC 2013 x86_64",
-#         system.sysoid           "1.3.6.1.4.1.8072.3.2.10",
-#         system.virtualization   ""
-#     },
-#     relatedDeviceId         -1,
-#     scanConfigId            0,
+=method C<add_to_group($group)>
+
+Add this host to the specified group. C<$group> can be either a string
+representing a group's full path, e.g. C<'/AWS/us-east-1/WebServers'>, or
+a L<WebService::LogicMonitor::Group> object.
+
+=cut
+
+sub add_to_group {
+    my ($self, $group) = @_;
+
+    # first make sure we are not already in the group
+    my $full_path = !ref $group ? $group : $group->full_path;
+
+    if (any { $_->full_path eq $full_path } @{$self->groups}) {
+        die "Host is already in group [$group]";
+    }
+
+    # if we get a string, try to lookup the group for it
+    if (!ref $group) {
+        my $groups = $self->_lm->get_groups(fullPath => $group)
+          or die "No such group found";
+        $group = shift @$groups;
+    }
+
+    return push @{$self->groups}, $group;
+}
+
+=method C<remove_from_group($group)>
+
+Remove this host from the specified group. C<$group> can be either a string
+representing a group's full path, e.g. C<'/AWS/us-east-1/WebServers'>, or
+a L<WebService::LogicMonitor::Group> object.
+
+=cut
+
+sub remove_from_group {
+    my ($self, $group) = @_;
+    my $full_path = !ref $group ? $group : $group->full_path;
+    my @new_groups = grep { $_->full_path ne $full_path } @{$self->groups};
+    return $self->_set_groups(\@new_groups);
+}
 
 1;
