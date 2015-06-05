@@ -125,17 +125,7 @@ sub update {
         alertEnable => $self->alert_enable,
     };
 
-    # then get properties because they need to be formatted
-    my $properties = $self->properties;
-
-    if ($properties) {
-        my $i = 0;
-        while (my ($k, $v) = each %$properties) {
-            $params->{"propName$i"}  = $k;
-            $params->{"propValue$i"} = $v;
-            $i++;
-        }
-    }
+    $self->_format_properties($params);
 
     return $self->_lm->_send_data('updateHostGroup', $params);
 }

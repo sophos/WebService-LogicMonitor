@@ -124,7 +124,7 @@ test 'update a host' => sub {
     #     'Fails without a host_id',
     # );
 
-    $host->properties->{'system.categories'} = 'channelserver';
+    $host->add_system_category('channelserver');
     is(exception { $host->update }, undef, 'Updated hosts',);
 
     #$host->{autoPropsAssignedOn} = time;

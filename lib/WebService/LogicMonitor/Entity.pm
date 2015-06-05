@@ -4,6 +4,7 @@ package WebService::LogicMonitor::Entity;
 
 use v5.16.3;
 use Log::Any '$log';
+use List::Util 1.33 'any';
 use Moo;
 
 has id => (is => 'ro', predicate => 1);    # int
@@ -32,7 +33,6 @@ has properties => (
     },
     coerce => sub {
         my $data = shift;
-
         if (ref $data eq 'ARRAY') {
             my %prop = map {
                 if (defined $_->{value} && $_->{value} ne '') {
@@ -41,15 +41,23 @@ has properties => (
                     ();
                 }
             } @$data;
+            $data = \%prop;
 
-            return \%prop;
         } else {
             for (keys %$data) {
                 delete $data->{$_}
                   if (defined $data->{$_} && $data->{$_} eq '');
             }
-            return $data;
         }
+
+        # convert certain comma separated strings to arrays
+        my @array_keys = (qw/system.categories system.groups/);
+        for (@array_keys) {
+            next unless exists $data->{$_};
+            $data->{$_} = [split ',', $data->{$_}];
+        }
+
+        return $data;
     },
 );
 
@@ -75,9 +83,37 @@ sub _build_properties {
             onlyOwnProperties => $only_own,
         );
     }
-    return $data;
 
-    # TODO convert comma separated strings to arrays
+    return $data;
+}
+
+sub _format_properties {
+    my ($self, $params) = @_;
+
+    # a lot of props starting with system are not settable
+    # XXX what about passwords - are they getting set to a literal '*******'?
+    my @system_props = (
+        qw/
+          system.groups system.hostname system.enablenetflow
+          system.devicetype system.displayname
+          /
+    );
+
+    my $i = 0;
+    while (my ($k, $v) = each %{$self->properties}) {
+        next if any { $_ eq $k } @system_props;
+
+        $params->{"propName$i"} = $k;
+        if (!ref $v) {
+            $params->{"propValue$i"} = $v;
+        } elsif (ref $v eq 'ARRAY') {
+            $params->{"propValue$i"} = join ',', @$v;
+        }
+        $i++;
+
+    }
+
+    return;
 }
 
 sub set_sdt {
@@ -108,6 +144,20 @@ sub set_quick_sdt {
     }
 
     return $self->_lm->set_quick_sdt($entity => $self->id, @_);
+}
+
+=method C<add_system_category($category)>
+
+Add another category to the C<system.categories> property. Will not add a
+category that is already set.
+
+=cut
+
+sub add_system_category {
+    my ($self, $category) = @_;
+    return
+      if any { $_ eq $category } @{$self->properties->{'system.categories'}};
+    return push @{$self->properties->{'system.categories'}}, $category;
 }
 
 1;

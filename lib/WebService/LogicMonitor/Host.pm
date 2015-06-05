@@ -108,17 +108,8 @@ sub update {
         enableNetflow => $self->enable_netflow,
     };
 
-    # then get properties because they need to be formatted
-    my $properties = $self->properties;
-
-    if ($properties) {
-        my $i = 0;
-        while (my ($k, $v) = each %$properties) {
-            $params->{"propName$i"}  = $k;
-            $params->{"propValue$i"} = $v;
-            $i++;
-        }
-    }
+    # get properties because they need to be formatted
+    $self->_format_properties($params);
 
     # convert fullPathInIds to hostGroupIds
     # TODO allow user to set hostGroupIds
@@ -130,6 +121,7 @@ sub update {
         my $hg_id = $full_path->[-1];
 
         # filter out any autogroups
+        # TODO cache groups
         my $hg = $self->_lm->get_groups(id => $hg_id);
         next if $hg->[0]->{appliesTo};
         push @hostgroup_ids, $hg_id;
