@@ -30,6 +30,27 @@ has properties => (
             die 'properties should be specified as a hashref';
         }
     },
+    coerce => sub {
+        my $data = shift;
+
+        if (ref $data eq 'ARRAY') {
+            my %prop = map {
+                if (defined $_->{value} && $_->{value} ne '') {
+                    $_->{name} => $_->{value};
+                } else {
+                    ();
+                }
+            } @$data;
+
+            return \%prop;
+        } else {
+            for (keys %$data) {
+                delete $data->{$_}
+                  if (defined $data->{$_} && $data->{$_} eq '');
+            }
+            return $data;
+        }
+    },
 );
 
 sub _build_properties {
@@ -54,12 +75,9 @@ sub _build_properties {
             onlyOwnProperties => $only_own,
         );
     }
+    return $data;
 
-    # TODO weed out empty strings,
     # TODO convert comma separated strings to arrays
-    my %prop = map { $_->{name} => $_->{value} } @{$data};
-
-    return \%prop;
 }
 
 sub set_sdt {
