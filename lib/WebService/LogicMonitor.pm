@@ -79,7 +79,9 @@ sub _get_data {
 
     $log->debug('URI: ' . $uri->path_query);
     my $res = $self->_ua->get($uri);
-    croak "Failed!\n" unless $res->is_success;
+    if (!$res->is_success) {
+        croak sprintf("HTTP error! %d - %s\n", $res->code, $res->message);
+    }
 
     my $res_decoded = decode_json $res->decoded_content;
 
@@ -104,7 +106,9 @@ sub _send_data {
     $log->debug('URI: ' . $uri->path_query);
 
     my $res = $self->_ua->get($uri);
-    croak "Failed!\n" unless $res->is_success;
+    if (!$res->is_success) {
+        croak sprintf("HTTP error! %d - %s\n", $res->code, $res->message);
+    }
 
     my $res_decoded = decode_json $res->decoded_content;
 
