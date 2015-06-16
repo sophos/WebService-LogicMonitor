@@ -295,6 +295,25 @@ sub get_alerts {
 
 }
 
+=method C<add_host>
+
+Creates and returns a new host. Shortcut for L<WebService::LogicMonitor::Host>
+C<new> and C<create>
+
+=cut
+
+sub add_host {
+    my $self = shift;
+
+    my %params = @_;
+
+    require WebService::LogicMonitor::Host;
+
+    $params{_lm} = $self;
+
+    return WebService::LogicMonitor::Host->new(\%params)->create;
+}
+
 =method C<get_host(Str displayname)>
 
 Return a host.
