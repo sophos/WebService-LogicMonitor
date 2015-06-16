@@ -151,7 +151,7 @@ sub update {
 
     $params->{hostGroupIds} = join ',', @hostgroup_ids;
 
-    $self->_lm->_send_data('updateHost', $params);
+    $self->_lm->_http_get('updateHost', $params);
     return;
 }
 
@@ -174,7 +174,7 @@ sub get_datasource_instances {
     die 'Missing datasource name' unless $ds_name;
 
     $log->debug("Fetching datasource instances for $ds_name");
-    my $data = $self->_lm->_get_data(
+    my $data = $self->_lm->_http_get(
         'getDataSourceInstances',
         hostId     => $self->id,
         dataSource => $ds_name,

@@ -78,7 +78,7 @@ sub _build_children {
     my $self = shift;
 
     my $data =
-      $self->_lm->_get_data('getHostGroupChildren', hostGroupId => $self->id);
+      $self->_lm->_http_get('getHostGroupChildren', hostGroupId => $self->id);
 
     require WebService::LogicMonitor::Host;
 
@@ -130,7 +130,7 @@ sub update {
 
     $self->_format_properties($params);
 
-    return $self->_lm->_send_data('updateHostGroup', $params);
+    return $self->_lm->_http_get('updateHostGroup', $params);
 }
 
 1;

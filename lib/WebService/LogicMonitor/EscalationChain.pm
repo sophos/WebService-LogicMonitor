@@ -121,7 +121,7 @@ sub update {
           $json->allow_blessed->convert_blessed->encode($self->$key);
     }
 
-    return $self->_lm->_send_data('updateEscalatingChain', \%params);
+    return $self->_lm->_http_get('updateEscalatingChain', \%params);
 }
 
 1;

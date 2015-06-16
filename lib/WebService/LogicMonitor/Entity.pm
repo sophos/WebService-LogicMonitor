@@ -75,9 +75,9 @@ sub _build_properties {
         # returned by get_hosts, don't need a separate step
         # perhaps useful for refreshing?
         $data =
-          $self->_lm->_get_data('getHostProperties', hostId => $self->id,);
+          $self->_lm->_http_get('getHostProperties', hostId => $self->id,);
     } else {
-        $data = $self->_lm->_get_data(
+        $data = $self->_lm->_http_get(
             'getHostGroupProperties',
             hostGroupId       => $self->id,
             onlyOwnProperties => $only_own,

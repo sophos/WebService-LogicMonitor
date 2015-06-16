@@ -92,7 +92,7 @@ test 'get data source instances' => sub {
 
     like(
         exception { $host->get_datasource_instances('ArgleBargle'); },
-        qr/^Failed to fetch data: \[600\]/,
+        qr/^Failed call to "getDataSourceInstances": \[600\]/,
         'No such datasurce',
     );
 

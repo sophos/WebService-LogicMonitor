@@ -66,44 +66,25 @@ sub _get_uri {
     return $uri;
 }
 
-sub _get_data {
-    my ($self, $method, %params) = @_;
+sub _http_get {
+    my ($self, $method) = (shift, shift);
+
+    my $params;
+
+    if (ref $_[0]) {
+        $params = shift;
+    } else {
+        my %hash = @_;
+        $params = \%hash;
+    }
 
     my $uri = $self->_get_uri($method);
 
-    if (%params) {
-        foreach my $param (keys %params) {
-            $uri->query_param_append($param, $params{$param});
-        }
+    foreach my $p (keys %$params) {
+        $uri->query_param_append($p, $params->{$p});
     }
 
-    $log->debug('URI: ' . $uri->path_query);
-    my $res = $self->_ua->get($uri);
-    if (!$res->is_success) {
-        croak sprintf("HTTP error! %d - %s\n", $res->code, $res->message);
-    }
-
-    my $res_decoded = decode_json $res->decoded_content;
-
-    if ($res_decoded->{status} != 200) {
-        croak(
-            sprintf 'Failed to fetch data: [%s] %s',
-            $res_decoded->{status},
-            $res_decoded->{errmsg});
-    }
-
-    return $res_decoded->{data};
-}
-
-sub _send_data {
-    my ($self, $method, $params) = @_;
-
-    my $uri = $self->_get_uri($method);
-
-    $params = merge $params, $self->_auth_hash;
-    $uri->query_form_hash($params);
-
-    $log->debug('URI: ' . $uri->path_query);
+    $log->debug('Generated URI: ' . $uri->path_query);
 
     my $res = $self->_ua->get($uri);
     if (!$res->is_success) {
@@ -114,7 +95,8 @@ sub _send_data {
 
     if ($res_decoded->{status} != 200) {
         croak(
-            sprintf 'Failed to send data: [%s] %s',
+            sprintf 'Failed call to "%s": [%s] %s',
+            $method,
             $res_decoded->{status},
             $res_decoded->{errmsg});
     }
@@ -133,7 +115,7 @@ L<http://help.logicmonitor.com/developers-guide/manage-escalation-chains/#get1>
 sub get_escalation_chains {
     my $self = shift;
 
-    my $data = $self->_get_data('getEscalationChains');
+    my $data = $self->_http_get('getEscalationChains');
 
     require WebService::LogicMonitor::EscalationChain;
 
@@ -174,7 +156,7 @@ L<http://help.logicmonitor.com/developers-guide/manage-user-accounts/#getAccount
 sub get_accounts {
     my $self = shift;
 
-    my $data = $self->_get_data('getAccounts');
+    my $data = $self->_http_get('getAccounts');
 
     require WebService::LogicMonitor::Account;
 
@@ -250,7 +232,7 @@ sub get_data {
         }
     }
 
-    my $data = $self->_get_data('getData', %params);
+    my $data = $self->_http_get('getData', %params);
 
     require WebService::LogicMonitor::DataSourceData;
     return WebService::LogicMonitor::DataSourceData->new($data);
@@ -279,7 +261,7 @@ sub get_alerts {
           if exists $args{$key};
     }
 
-    my $data = $self->_get_data('getAlerts', %args);
+    my $data = $self->_http_get('getAlerts', %args);
 
     return if $data->{total} == 0;
 
@@ -326,7 +308,7 @@ sub get_host {
 
     croak "Missing displayname" unless $displayname;
 
-    my $data = $self->_get_data('getHost', displayName => $displayname);
+    my $data = $self->_http_get('getHost', displayName => $displayname);
 
     require WebService::LogicMonitor::Host;
     $data->{_lm} = $self;
@@ -350,7 +332,7 @@ sub get_hosts {
 
     croak "Missing hostgroupid" unless $hostgroupid;
 
-    my $data = $self->_get_data('getHosts', hostGroupId => $hostgroupid);
+    my $data = $self->_http_get('getHosts', hostGroupId => $hostgroupid);
 
     require WebService::LogicMonitor::Host;
 
@@ -393,7 +375,7 @@ sub get_groups {
 
     $log->debug('Fetching a list of groups');
 
-    my $data = $self->_get_data('getHostGroups');
+    my $data = $self->_http_get('getHostGroups');
 
     $log->debug('Number of hosts found: ' . scalar @$data);
 
@@ -452,9 +434,9 @@ sub get_sdts {
     my $data;
     if ($key) {
         defined $id or croak 'Can not specify a key without an id';
-        $data = $self->_get_data('getSDTs', $key => $id);
+        $data = $self->_http_get('getSDTs', $key => $id);
     } else {
-        $data = $self->_get_data('getSDTs');
+        $data = $self->_http_get('getSDTs');
     }
 
     require WebService::LogicMonitor::SDT;
@@ -553,7 +535,7 @@ sub set_sdt {
         $end_dt->day, $end_dt->hour, $end_dt->minute
     );
 
-    my $res = $self->_send_data($method, $params);
+    my $res = $self->_http_get($method, $params);
 
     require WebService::LogicMonitor::SDT;
     $res->{_lm} = $self;
