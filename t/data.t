@@ -190,7 +190,7 @@ test 'get two datapoints' => sub {
 
     my $dsi_values = $data->values->{$self->{datasource}};
     my $rand_value =
-      $dsi_values->{[keys %$dsi_values]->[int rand keys $dsi_values]};
+      $dsi_values->{[keys %$dsi_values]->[int rand keys %$dsi_values]};
     is keys %$rand_value, 2, 'Got two keys...';
     ok exists $rand_value->{$self->datapoint}, '... two matches';
 };
