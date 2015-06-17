@@ -311,4 +311,32 @@ sub remove_from_group {
     return $self->_set_groups(\@new_groups);
 }
 
+=method C<delete>
+
+Remove this host from LogicMonitor.
+
+L<http://help.logicmonitor.com/developers-guide/manage-hosts/#delete>
+
+This differes from LoMo's API in that it will always remove a host from the
+system. If you want to remove a host from a group, use L</remove_from_group>.
+
+=cut
+
+sub delete {
+    my $self = shift;
+
+    if (!$self->has_id) {
+        die
+          'This host does not have an id - you cannot remove object that has not been created';
+    }
+
+    $self->_lm->_http_get(
+        'deleteHost',
+        hostId           => $self->id,
+        deleteFromSystem => 1
+    );
+
+    return;
+}
+
 1;

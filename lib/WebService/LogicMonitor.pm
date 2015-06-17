@@ -315,6 +315,21 @@ sub add_host {
     return WebService::LogicMonitor::Host->new(\%params)->create;
 }
 
+=method C<delete_host(Str displayname)>
+
+Deletes a host identified by its displayname. Convenience wrapper around
+L<WebService::LogicMonitor/get_host> and L<WebService::LogicMonitor::Host/delete>.
+
+=cut
+
+sub delete_host {
+    my ($self, $displayname) = @_;
+
+    croak 'Missing displayname' unless $displayname;
+
+    return $self->get_host($displayname)->delete;
+}
+
 =method C<get_host(Str displayname)>
 
 Return a host.
