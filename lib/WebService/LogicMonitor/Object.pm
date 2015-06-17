@@ -2,7 +2,15 @@ package WebService::LogicMonitor::Object;
 
 use Moo::Role;
 
-has _lm => (is => 'ro', required => 1, weak_ref => 1);
+has _lm => (
+    is       => 'ro',
+    weak_ref => 1,
+    default  => sub {
+
+        # this is really a singleton
+        WebService::LogicMonitor->new;
+    },
+);
 
 sub _transform_incoming_keys {
     my ($transform, $args) = @_;

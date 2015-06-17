@@ -83,7 +83,6 @@ sub _build_children {
     require WebService::LogicMonitor::Host;
 
     my @children = map {
-        $_->{_lm} = $self->{_lm};
         if ($_->{type} eq 'HOSTGROUP') {
             WebService::LogicMonitor::Group->new($_);
         } elsif ($_->{type} eq 'HOST') {

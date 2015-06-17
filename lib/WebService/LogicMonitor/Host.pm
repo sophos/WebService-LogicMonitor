@@ -172,7 +172,6 @@ sub create {
     }
 
     my $new_host = $self->_lm->_http_get('addHost', $params);
-    $new_host->{_lm} = $self->_lm;
     return WebService::LogicMonitor::Host->new($new_host);
 }
 
@@ -252,7 +251,6 @@ sub get_datasource_instances {
 
     my @ds_instances;
     for (@$data) {
-        $_->{_lm}       = $self->_lm;
         $_->{host_name} = $self->name;
         push @ds_instances,
           WebService::LogicMonitor::DataSourceInstance->new($_);
