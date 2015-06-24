@@ -9,7 +9,8 @@ use Moo;
 
 has id => (is => 'ro', predicate => 1);    # int
 
-has name => (is => 'rw', required => 1);   # str
+# use this instead of displayed_as for hosts?
+has name => (is => 'rw', required => 0);    # str
 
 has description => (is => 'rw', predicate => 1);    # str
 
@@ -22,11 +23,14 @@ has created_on => (
 
 has type => (is => 'ro');                           # enum HOST|HOSTGROUP
 
-has [qw/alert_enable in_sdt/] => (is => 'rw');      # bool
+has [qw/alert_enable in_sdt/] => (is => 'rw', default => 0);    # bool
 
 has properties => (
-    is  => 'lazy',
-    isa => sub {
+    is        => 'rw',
+    lazy      => 1,
+    builder   => 1,
+    predicate => 1,
+    isa       => sub {
         unless (ref $_[0] && ref $_[0] eq 'HASH') {
             die 'properties should be specified as a hashref';
         }

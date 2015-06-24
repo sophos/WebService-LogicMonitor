@@ -18,6 +18,15 @@ use URI::QueryParam;
 use URI;
 use Moo;
 
+with 'Role::Singleton::New';
+
+sub BUILD {
+
+    # After new is done we turn it into a singleton. Any furrther call to new
+    # will return the same instance
+    return $_[0]->turn_new_into_singleton;
+}
+
 =attr C<company>, C<username>, C<password>
 
 The CUP authentication details for your LogicMonitor account. See
@@ -121,7 +130,6 @@ sub get_escalation_chains {
 
     my @chains;
     foreach my $chain (@$data) {
-        $chain->{_lm} = $self;
         push @chains, WebService::LogicMonitor::EscalationChain->new($chain);
     }
 
@@ -162,7 +170,6 @@ sub get_accounts {
 
     my @accounts;
     for (@$data) {
-        $_->{_lm} = $self;
         push @accounts, WebService::LogicMonitor::Account->new($_);
     }
 
@@ -277,7 +284,6 @@ sub get_alerts {
             if ($group_cache{$_->{id}}) {
                 push @groups, $group_cache{$_->{id}};
             } else {
-                $_->{_lm} = $self;
                 my $g = WebService::LogicMonitor::Group->new($_);
                 $group_cache{$_->{id}} = $g;
                 push @groups, $g;
@@ -286,13 +292,42 @@ sub get_alerts {
         $alert->{hostGroups} = \@groups;
     }
 
-    my @alerts = map {
-        $_->{_lm} = $self;
-        WebService::LogicMonitor::Alert->new($_);
-    } @{$data->{alerts}};
+    my @alerts =
+      map { WebService::LogicMonitor::Alert->new($_); } @{$data->{alerts}};
 
     return \@alerts;
 
+}
+
+=method C<add_host>
+
+Creates and returns a new host. Shortcut for L<WebService::LogicMonitor::Host>
+C<new> and C<create>
+
+=cut
+
+sub add_host {
+    my $self = shift;
+
+    my %params = @_;
+
+    require WebService::LogicMonitor::Host;
+    return WebService::LogicMonitor::Host->new(\%params)->create;
+}
+
+=method C<delete_host(Str displayname)>
+
+Deletes a host identified by its displayname. Convenience wrapper around
+L<WebService::LogicMonitor/get_host> and L<WebService::LogicMonitor::Host/delete>.
+
+=cut
+
+sub delete_host {
+    my ($self, $displayname) = @_;
+
+    croak 'Missing displayname' unless $displayname;
+
+    return $self->get_host($displayname)->delete;
 }
 
 =method C<get_host(Str displayname)>
@@ -311,7 +346,6 @@ sub get_host {
     my $data = $self->_http_get('getHost', displayName => $displayname);
 
     require WebService::LogicMonitor::Host;
-    $data->{_lm} = $self;
     return WebService::LogicMonitor::Host->new($data);
 }
 
@@ -338,7 +372,6 @@ sub get_hosts {
 
     my @hosts;
     for (@{$data->{hosts}}) {
-        $_->{_lm} = $self;
         push @hosts, WebService::LogicMonitor::Host->new($_);
     }
 
@@ -388,10 +421,7 @@ sub get_groups {
     require WebService::LogicMonitor::Group;
 
     if (!defined $value) {
-        my @groups = map {
-            $_->{_lm} = $self;
-            WebService::LogicMonitor::Group->new($_);
-        } @$data;
+        my @groups = map { WebService::LogicMonitor::Group->new($_); } @$data;
         return \@groups;
     }
 
@@ -407,7 +437,6 @@ sub get_groups {
     my @groups = map {
         die "This key is not valid: $key" unless $_->{$key};
         if ($filter_is_regexp ? $_->{$key} =~ $value : $_->{$key} eq $value) {
-            $_->{_lm} = $self;
             WebService::LogicMonitor::Group->new($_);
         } else {
             ();
@@ -443,7 +472,6 @@ sub get_sdts {
 
     my @sdts;
     for (@$data) {
-        $_->{_lm} = $self;
         push @sdts, WebService::LogicMonitor::SDT->new($_);
     }
 
@@ -538,7 +566,6 @@ sub set_sdt {
     my $res = $self->_http_get($method, $params);
 
     require WebService::LogicMonitor::SDT;
-    $res->{_lm} = $self;
     return WebService::LogicMonitor::SDT->new($res);
 }
 

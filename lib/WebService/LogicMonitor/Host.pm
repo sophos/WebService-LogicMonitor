@@ -13,7 +13,15 @@ extends 'WebService::LogicMonitor::Entity';
 with 'WebService::LogicMonitor::Object';
 
 sub BUILDARGS {
-    my ($class, $args) = @_;
+    my $class = shift;
+
+    my $args;
+    if (ref $_[0]) {
+        $args = shift;
+    } else {
+        my %hash = @_;
+        $args = \%hash;
+    }
 
     my %transform = (
         agentDescription      => 'agent_description',
@@ -75,7 +83,19 @@ and </remove_from_group> methods instead.
 
 =cut
 
-has groups => (is => 'rwp', lazy => 1, builder => 1);
+has groups => (
+    is        => 'rwp',
+    lazy      => 1,
+    builder   => 1,
+    predicate => 1,
+    isa       => sub {
+        unless (ref $_[0] && ref $_[0] eq 'ARRAY') {
+            die 'groups should be an arrayref';
+        }
+    },
+
+    # TODO allow setting an arryref of strings which will coerce to group objects
+);
 
 has _full_path_in_ids => (
     is       => 'ro',
@@ -107,6 +127,53 @@ A cache of any datasource instances that are retrieved.
 =cut
 
 has datasource_instances => (is => 'ro', lazy => 1, default => sub {{}});
+
+=method C<create>
+
+Create this host on LogicMonitor.
+
+L<http://help.logicmonitor.com/developers-guide/manage-hosts/#add>
+
+=cut
+
+sub create {
+    my $self = shift;
+
+    if ($self->has_id) {
+        die
+          'This host already has an id - you cannot create an object that already exists';
+    }
+
+    # first, get the required params
+    my $params = {
+        hostName    => $self->host_name,
+        displayedAs => $self->displayed_as,
+        agentId     => $self->agent_id,
+        alertEnable => $self->alert_enable,
+    };
+
+    $params->{description} = $self->description if $self->description;
+    $params->{link}        = $self->link        if $self->link;
+
+    if ($self->has_properties) {
+        $self->_format_properties($params);
+    }
+
+    if ($self->has_groups) {
+        my @hostgroup_ids;
+        foreach my $g (@{$self->groups}) {
+
+            # filter out any autogroups
+            next if $g->applies_to;
+            push @hostgroup_ids, $g->id;
+        }
+
+        $params->{hostGroupIds} = join ',', @hostgroup_ids;
+    }
+
+    my $new_host = $self->_lm->_http_get('addHost', $params);
+    return WebService::LogicMonitor::Host->new($new_host);
+}
 
 =method C<update>
 
@@ -184,7 +251,6 @@ sub get_datasource_instances {
 
     my @ds_instances;
     for (@$data) {
-        $_->{_lm}       = $self->_lm;
         $_->{host_name} = $self->name;
         push @ds_instances,
           WebService::LogicMonitor::DataSourceInstance->new($_);
@@ -243,6 +309,34 @@ sub remove_from_group {
     my $full_path = !ref $group ? $group : $group->full_path;
     my @new_groups = grep { $_->full_path ne $full_path } @{$self->groups};
     return $self->_set_groups(\@new_groups);
+}
+
+=method C<delete>
+
+Remove this host from LogicMonitor.
+
+L<http://help.logicmonitor.com/developers-guide/manage-hosts/#delete>
+
+This differes from LoMo's API in that it will always remove a host from the
+system. If you want to remove a host from a group, use L</remove_from_group>.
+
+=cut
+
+sub delete {
+    my $self = shift;
+
+    if (!$self->has_id) {
+        die
+          'This host does not have an id - you cannot remove object that has not been created';
+    }
+
+    $self->_lm->_http_get(
+        'deleteHost',
+        hostId           => $self->id,
+        deleteFromSystem => 1
+    );
+
+    return;
 }
 
 1;

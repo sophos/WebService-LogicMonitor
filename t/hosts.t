@@ -2,6 +2,7 @@ use lib 't/lib';
 use Test::Fatal;
 use Test::Deep;
 use Test::Roo;
+use String::Random 'random_string';
 
 with 'LogicMonitorTests';
 
@@ -142,6 +143,41 @@ test 'update a host' => sub {
     # p $host2;
 
     # cmp_deeply $host, $host2, 'Old host and new host match';
+};
+
+test 'add and remove host' => sub {
+    my $self = shift;
+
+    my $hostname = random_string('cccccccccccc');
+
+    my $host;
+    is(
+        exception {
+            $host = WebService::LogicMonitor::Host->new(
+                host_name    => "$hostname.example.com",
+                displayed_as => $hostname,
+                agent_id => 24,    # XXX we need a dedicated test collector!
+                link => "http://$hostname.example.com",
+            );
+        },
+        undef,
+        'Created a new host object',
+    );
+
+    is(exception { $host->create },
+        undef, "New host $hostname created in LoMo");
+
+    my $new_host = $self->lm->get_host($hostname);
+    is $new_host->link, "http://$hostname.example.com",
+      "New host $hostname has correct link";
+
+    is(exception { $new_host->delete },
+        undef, "New host $hostname deleted from LoMo");
+    like(
+        exception { $self->lm->get_host($hostname); },
+        qr/^Failed call to "getHost": \[1007\] No such host/,
+        "Host $hostname is definitely gone"
+    );
 };
 
 run_me;
