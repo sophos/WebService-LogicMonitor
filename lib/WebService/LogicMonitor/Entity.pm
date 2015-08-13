@@ -105,6 +105,7 @@ sub _format_properties {
 
     my $i = 0;
     while (my ($k, $v) = each %{$self->properties}) {
+        next if $v =~ /^\*+$/;
         next if any { $_ eq $k } @system_props;
 
         $params->{"propName$i"} = $k;
