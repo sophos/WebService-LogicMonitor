@@ -202,6 +202,9 @@ sub update {
         enableNetflow => $self->enable_netflow,
     };
 
+    $params->{description} = $self->description if $self->description;
+    $params->{link}        = $self->link        if $self->link;
+
     # get properties because they need to be formatted
     $self->_format_properties($params);
 
