@@ -18,8 +18,13 @@ test 'get alerts' => sub {
     isa_ok $alerts, 'ARRAY';
 
     is exception { $alerts = $self->lm->get_alerts(host => $self->host) },
-      undef, 'got alerts for one hsot';
-    isa_ok $alerts, 'ARRAY';
+      undef, 'got alerts for one host';
+
+  SKIP: {
+        skip 'There are no alerts for this test host', 1 unless $alerts;
+        isa_ok $alerts, 'ARRAY';
+
+    }
 };
 
 # test 'get alerts last month' => sub {
