@@ -156,7 +156,7 @@ test 'add and remove host' => sub {
             $host = WebService::LogicMonitor::Host->new(
                 host_name    => "$hostname.example.com",
                 displayed_as => $hostname,
-                agent_id => 24,    # XXX we need a dedicated test collector!
+                agent_id => 11,    # XXX we need a dedicated test collector!
                 link => "http://$hostname.example.com",
             );
         },
