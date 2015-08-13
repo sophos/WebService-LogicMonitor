@@ -28,13 +28,20 @@ my $host_group  = shift @$host_groups;
 my $hosts       = $lm->get_hosts($host_group->id);
 
 foreach my $host (@$hosts) {
-    if ($host->agent_id == $opt->{old_agent_id}) {
-        say $host->name . ' uses old collector';
-        $host->agent_id($opt->{new_agent_id});
-        $host->update;
-    } elsif ($host->agent_id == $opt->{new_agent_id}) {
-        say $host->name . ' already uses new collector';
+    if ($opt->{old_agent_id}) {
+        say $host->name . ' uses old collector'
+          if $host->agent_id == $opt->{old_agent_id};
     } else {
         say $host->name . ' uses collector ' . $host->agent_id;
     }
+
+    if ($opt->{new_agent_id}) {
+        if ($host->agent_id == $opt->{new_agent_id}) {
+            say $host->name . ' already uses new collector';
+        } else {
+            $host->agent_id($opt->{new_agent_id});
+            $host->update;
+        }
+    }
+
 }
