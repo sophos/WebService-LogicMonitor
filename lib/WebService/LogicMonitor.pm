@@ -199,6 +199,29 @@ sub get_account_by_email {
     return $account;
 }
 
+=method C<get_account_by_username(Str $username)>
+
+Convenience wrapper aroung L</get_accounts> which only returns accounts
+matching C<$username>.
+
+=cut
+
+sub get_account_by_username {
+    my ($self, $username) = @_;
+
+    croak 'Missing username' unless $username;
+
+    my $accounts = $self->get_accounts;
+
+    $log->debug("Searching for a user account named [$username]");
+
+    my $account = first { $_->{username} =~ /$username/i } @$accounts;
+
+    croak "Failed to find account with username <$username>" unless $account;
+
+    return $account;
+}
+
 =method C<get_data>
   host    string  The display name of the host
   dataSourceInstance  string  The Unique name of the DataSource Instance
