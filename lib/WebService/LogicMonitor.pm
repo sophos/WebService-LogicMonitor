@@ -186,6 +186,8 @@ matching $email.
 sub get_account_by_email {
     my ($self, $email) = @_;
 
+    croak "Missing email address" unless $email;
+
     my $accounts = $self->get_accounts;
 
     $log->debug("Searching for a user account with email address [$email]");
