@@ -416,7 +416,7 @@ sub get_all_hosts {
     return $_[0]->get_hosts(1);
 }
 
-=method C<get_host_groups(Str|Regexp filter?)>
+=method C<get_groups(Str|Regexp filter?)>
 
 Returns an arrayref of all host groups.
 
@@ -646,7 +646,7 @@ __END__
 
   my $datasource = 'Ping';
   my $host_groups  = try {
-      my $hg = $lm->get_host_groups(name => 'Abingdon');
+      my $hg = $lm->get_groups(name => 'Abingdon');
       die 'No such host group' unless $hg;
       $lm->get_host_group_children($hg->[0]{id});
   } catch {
