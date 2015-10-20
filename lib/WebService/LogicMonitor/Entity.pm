@@ -65,6 +65,18 @@ has properties => (
     },
 );
 
+has is_group => (
+    is      => 'ro',
+    lazy    => 1,
+    default => sub { $_[0]->type eq 'HOSTGROUP' ? 1 : 0 },
+);
+
+has is_host => (
+    is      => 'ro',
+    lazy    => 1,
+    default => sub { $_[0]->type eq 'HOST' ? 1 : 0 },
+);
+
 sub _build_properties {
     my ($self, $only_own) = @_;
 
