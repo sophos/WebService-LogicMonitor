@@ -620,8 +620,8 @@ __END__
 
 =head1 SYNOPSIS
 
-  use v5.14.1;
-  use strict;
+  use v5.16;
+  use warnings;
   use Try::Tiny;
   use WebService::LogicMonitor;
 
@@ -634,40 +634,52 @@ __END__
       company  => $ENV{LOGICMONITOR_COMPANY},
   );
 
-  my $datasource = 'Ping';
-  my $host_groups  = try {
-      my $hg = $lm->get_groups(name => 'Abingdon');
-      die 'No such host group' unless $hg;
-      $lm->get_host_group_children($hg->[0]{id});
-  } catch {
-      die "Error retrieving host group: $_";
-  };
+  my $top_group_name = shift || die "What group?\n";
+  my $datasource     = shift || 'Ping';
 
-  die 'Host group has no children' unless $host_groups;
+  sub recurse_group {
+      my $group = shift;
+      foreach my $entity (@{$group->children}) {
+          if ($entity->is_group) {
+              say 'GROUP: ' . $entity->name;
+              recurse_group($entity);
+          } elsif ($entity->is_host) {
+              say '  HOST: ' . $entity->host_name;
+              my $instances = try {
+                  $entity->get_datasource_instances($datasource);
+              } catch {
+                  say "Failed to retrieve data source instances: " . $_;
+                  next;
+              };
 
-  foreach my $hg (@$host_groups) {
-      say "Checking group: $hg->{name}";
-      my $hosts = $lm->get_hosts($hg->{id});
-
-      foreach my $host (@$hosts) {
-          say "\tChecking host: $host->{hostName}";
-          my $instances = try {
-              $lm->get_data_source_instances($host->{id}, $datasource);
+              next unless $instances;
+              # assume only one instance
+              my $instance = shift @$instances;
+              say '    datasource status: '
+                . ($instance->enabled ? 'enabled' : 'disabled');
+              say '    alert status: '
+                . ($instance->alert_enable ? 'enabled' : 'disabled');
           }
-          catch {
-              say "Failed to retrieve data source instances: " . $_;
-              return undef;
-          };
 
-          next unless $instances;
-
-          # only one instance
-          my $instance = shift @$instances;
-
-          say "\t\tdatasource status: " . ($instance->{enabled} ? 'enabled' : 'disabled');
-          say "\t\talert status: " . ($instance->{alertEnable} ? 'enabled' : 'disabled');
       }
   }
+
+  my $groups = $lm->get_groups(name => $top_group_name);
+  recurse_group(shift @$groups);
+
+=head1 DESCRIPTION
+
+LogicMonitor is a SaaS infrastructure monitoring provider. They provide an RPC
+API which provides most of functionality of their web GUI (with the unfortunate
+omission of managing DataSources).
+
+They have recently started a REST API which covers a different set of functionality.
+
+This module puts an OO wrapper around the RPC API in what is a hopefully a much
+more convenient and user-friendly manner.
+
+B<HOWEVER> the API provided by this module is not considered stable and will
+almost certainly have some changes before version 1.0.
 
 =head1 SEE ALSO
 

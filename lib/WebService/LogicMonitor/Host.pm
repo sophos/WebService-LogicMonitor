@@ -225,7 +225,7 @@ sub update {
     return;
 }
 
-=method C<get_data_source_instances(Str datasource_name)>
+=method C<get_datasource_instances(Str datasource_name)>
 
 Return an array of instances of a datasource on this host. The array will also
 be cached in L</datasource_instances>.
