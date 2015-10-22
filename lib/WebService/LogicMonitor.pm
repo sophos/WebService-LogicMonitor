@@ -2,13 +2,12 @@ package WebService::LogicMonitor;
 
 our $VERSION = '0.0';
 
-# ABSTRACT: Interact with LogicMonitor through their web API
+# ABSTRACT: Interact with LogicMonitor's API
 
 use v5.16.3;    # minimum for CentOS 7
 use autodie;
 use Carp;
 use DateTime;
-use Hash::Merge 'merge';
 use LWP::UserAgent;
 use JSON;
 use List::Util 'first';
@@ -223,15 +222,6 @@ sub get_account_by_username {
 }
 
 =method C<get_data>
-  host    string  The display name of the host
-  dataSourceInstance  string  The Unique name of the DataSource Instance
-  period  string  The time period to Download Data from. Valid inputs include nhours, ndays, nweeks, nmonths, or nyears (ex. 2hours)
-  dataPoint{0-n}  string  The unique name of the Datapoint
-  start, end  long    Epoch Time in seconds
-  graphId integer (Optional) The Unique ID of the Datasource Instance Graph
-  graph   string  (Optional) The Unique Graph Name
-  aggregate   string  (Optional- defaults to null) Take the "AVERAGE", "MAX", "MIN", or "LAST" of your data
-  overviewGraph   string  The name of the Overview Graph to get data from
 =cut
 
 # TODO why does this work with only host display name and not id?
@@ -678,3 +668,7 @@ __END__
           say "\t\talert status: " . ($instance->{alertEnable} ? 'enabled' : 'disabled');
       }
   }
+
+=head1 SEE ALSO
+
+L<LogicMonitor|http://www.logicmonitor.com/>
