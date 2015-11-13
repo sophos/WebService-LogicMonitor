@@ -4,7 +4,7 @@ WebService::LogicMonitor - Interact with LogicMonitor's API
 
 # VERSION
 
-version 1.152950
+version 0.153170
 
 # SYNOPSIS
 
@@ -208,7 +208,7 @@ Ioan Rogers &lt;ioan.rogers@sophos.com>
 
 # COPYRIGHT AND LICENSE
 
-This software is copyright (c) 2014 by Sophos Ltd.
+This software is copyright (c) 2015 by Sophos Ltd.
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.
