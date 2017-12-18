@@ -79,25 +79,4 @@ has [qw/view_message_on last_login_on/] => (is => 'rw');    # date iso8601-ish
 
 has roles => (is => 'rw');
 
-#     password              "$2a$10$JtUctKVsWI1DdFzlMQV4peZsh38nkg2nYU1NuXltjypyoSiWLHYeG",
-#     priv                  "readwrite",
-#     roles                 [
-#         [0] {
-#             description   "Administrator can do everything",
-#             id            1,
-#             name          "administrator",
-#             privileges    []
-#         }
-#     ],
-#     viewPermission        {
-#         Alerts       true,
-#         Dashboards   true,
-#         Hosts        true,
-#         NewUI        true,
-#         Reports      true,
-#         Services     true,
-#         Settings     true
-#     }
-# },
-
 1;
